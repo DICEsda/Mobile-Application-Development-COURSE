@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Game controller icon simplified -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,44H34c-5.5,0 -10,4.5 -10,10v0c0,5.5 4.5,10 10,10h40c5.5,0 10,-4.5 10,-10v0C84,48.5 79.5,44 74,44z"/>
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M42,50h-4v-4h-4v4h-4v4h4v4h4v-4h4z"/>
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M70,47m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M78,51m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+</vector>

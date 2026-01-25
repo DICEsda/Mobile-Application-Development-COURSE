@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "appium-mcp": {
+      "disabled": false,
+      "timeout": 100,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "appium-mcp@latest"
+      ],
+      "env": {
+        "ANDROID_HOME": "C:\\Users\\jahy0\\AppData\\Local\\Android\\Sdk",
+        "CAPABILITIES_CONFIG": "./capabilities.json"
+      }
+    }
+  }
+}

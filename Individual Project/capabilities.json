@@ -1,0 +1,12 @@
+{
+  "android": {
+    "platformName": "Android",
+    "appium:deviceName": "emulator-5554",
+    "appium:platformVersion": "15",
+    "appium:automationName": "UiAutomator2",
+    "appium:app": "./app/build/outputs/apk/debug/app-debug.apk",
+    "appium:noReset": true,
+    "appium:fullReset": false,
+    "appium:newCommandTimeout": 300
+  }
+}

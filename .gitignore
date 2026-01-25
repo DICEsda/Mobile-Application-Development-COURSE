@@ -1,0 +1,17 @@
+# Gradle
+.gradle/
+.gradle-temp/
+build/
+
+# Kotlin
+.kotlin/
+
+# Node
+node_modules/
+
+# OS / IDE
+*.log
+.idea/
+.vscode/
+.DS_Store
+gradle-*-bin.zip

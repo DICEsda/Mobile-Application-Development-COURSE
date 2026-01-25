@@ -1,0 +1,19 @@
+{
+  "name": "individual-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@langchain/core": "^1.1.17",
+    "appium": "^3.1.2",
+    "appium-mcp": "^1.8.11",
+    "webdriverio": "^9.23.2"
+  }
+}
