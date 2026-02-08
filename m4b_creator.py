@@ -31,7 +31,11 @@ from typing import List, Dict, Optional
 import requests
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
+from mutagen.m4a import M4A
 from mutagen.id3 import ID3
+from mutagen.flac import FLAC
+from mutagen.oggvorbis import OggVorbis
+from mutagen.wave import WAVE
 from colorama import init, Fore, Style
 
 # Initialize colorama for Windows color support
@@ -100,11 +104,84 @@ class M4BCreator:
     def get_duration_ms(self, file: Path) -> int:
         """Get audio file duration in milliseconds."""
         try:
-            audio = MP3(str(file))
+            ext = file.suffix.lower()
+            if ext == '.mp3':
+                audio = MP3(str(file))
+            elif ext in ['.m4a', '.m4b']:
+                audio = M4A(str(file))
+            elif ext == '.flac':
+                audio = FLAC(str(file))
+            elif ext == '.ogg':
+                audio = OggVorbis(str(file))
+            elif ext == '.wav':
+                audio = WAVE(str(file))
+            else:
+                audio = MP3(str(file))
+            
             return int(audio.info.length * 1000)
         except Exception as e:
             self.log(f"Warning: Could not read duration for {file.name}: {e}", Fore.YELLOW)
             return 0
+    
+    def extract_metadata_from_files(self, files: List[Path]) -> Dict:
+        """Extract metadata from audio files themselves."""
+        self.log("\n📝 Extracting metadata from audio files...", Fore.CYAN)
+        
+        metadata = {
+            "title": "",
+            "author": "",
+            "publisher": "",
+            "year": "",
+            "description": "",
+            "narrator": ""
+        }
+        
+        # Try to get metadata from the first file
+        if not files:
+            return metadata
+        
+        first_file = files[0]
+        ext = first_file.suffix.lower()
+        
+        try:
+            if ext == '.mp3':
+                audio = MP3(str(first_file))
+                tags = audio.tags
+                if tags:
+                    metadata["title"] = str(tags.get("TIT2", "")) or str(tags.get("TALB", ""))
+                    metadata["author"] = str(tags.get("TPE1", "")) or str(tags.get("TPE2", ""))
+                    metadata["publisher"] = str(tags.get("TPUB", ""))
+                    metadata["year"] = str(tags.get("TDRC", ""))
+                    metadata["description"] = str(tags.get("COMM::eng", ""))
+                    
+            elif ext in ['.m4a', '.m4b']:
+                audio = M4A(str(first_file))
+                tags = audio.tags
+                if tags:
+                    metadata["title"] = tags.get("©nam", [""])[0] or tags.get("©alb", [""])[0]
+                    metadata["author"] = tags.get("©ART", [""])[0] or tags.get("aART", [""])[0]
+                    metadata["publisher"] = tags.get("©pub", [""])[0]
+                    metadata["year"] = tags.get("©day", [""])[0]
+                    metadata["description"] = tags.get("©cmt", [""])[0] or tags.get("desc", [""])[0]
+                    metadata["narrator"] = tags.get("©wrt", [""])[0]
+            
+            # Clean up metadata
+            metadata = {k: v.strip() if isinstance(v, str) else v for k, v in metadata.items()}
+            
+            if metadata["title"]:
+                self.log(f"✓ Found embedded metadata: {metadata['title']}", Fore.GREEN)
+            else:
+                self.log("✗ No embedded metadata found", Fore.YELLOW)
+                # Use folder name as fallback
+                metadata["title"] = first_file.parent.name
+                self.log(f"  Using folder name: {metadata['title']}", Fore.CYAN)
+            
+        except Exception as e:
+            self.log(f"✗ Could not extract metadata: {e}", Fore.YELLOW)
+            # Use folder name as fallback
+            metadata["title"] = first_file.parent.name
+        
+        return metadata
     
     def fetch_open_library_metadata(self, title: str) -> Dict:
         """Fetch book metadata from Open Library API."""
@@ -141,10 +218,25 @@ class M4BCreator:
             return {}
     
     def download_cover(self, cover_url: str) -> Optional[Path]:
-        """Download cover image from URL."""
+        """Download cover image from URL or copy from local path."""
         if not cover_url:
             return None
-            
+        
+        # Check if it's a local file path
+        local_path = Path(cover_url)
+        if local_path.exists() and local_path.is_file():
+            self.log(f"📁 Using local cover: {cover_url}", Fore.CYAN)
+            cover_path = self.output_dir / "cover.jpg"
+            try:
+                import shutil
+                shutil.copy(str(local_path), str(cover_path))
+                self.log(f"✓ Cover copied to {cover_path}", Fore.GREEN)
+                return cover_path
+            except Exception as e:
+                self.log(f"✗ Could not copy cover: {e}", Fore.YELLOW)
+                return None
+        
+        # Download from URL
         self.log("📥 Downloading cover art...", Fore.CYAN)
         cover_path = self.output_dir / "cover.jpg"
         
@@ -211,19 +303,31 @@ class M4BCreator:
         
         return list_file
     
-    def edit_metadata(self, metadata: Dict) -> Dict:
+    def edit_metadata(self, metadata: Dict, allow_empty: bool = False) -> Dict:
         """Interactive metadata editor."""
         self.log("\n✏️  Edit Metadata (press Enter to keep current value):", Fore.YELLOW)
         
-        editable_fields = ["title", "author", "publisher", "year", "description"]
+        editable_fields = ["title", "author", "narrator", "publisher", "year", "description"]
         
         for field in editable_fields:
             current = metadata.get(field, "")
-            self.log(f"\n{field.capitalize()}: {Fore.CYAN}{current}{Style.RESET_ALL}")
+            
+            # Highlight empty fields
+            if not current:
+                self.log(f"\n{field.capitalize()}: {Fore.RED}(empty){Style.RESET_ALL}")
+            else:
+                self.log(f"\n{field.capitalize()}: {Fore.CYAN}{current}{Style.RESET_ALL}")
+            
             new_value = input(f"New value (or Enter to keep): ").strip()
             
             if new_value:
                 metadata[field] = new_value
+            elif not current and not allow_empty:
+                # Prompt for required fields
+                if field in ["title", "author"]:
+                    while not new_value:
+                        new_value = input(f"{Fore.YELLOW}⚠ {field.capitalize()} is required. Enter value: {Style.RESET_ALL}").strip()
+                    metadata[field] = new_value
         
         # Ask about cover
         if "cover_url" in metadata:
@@ -232,9 +336,43 @@ class M4BCreator:
             if use_cover == 'n':
                 metadata.pop("cover_url", None)
         else:
-            cover_url = input("\nEnter cover image URL (or press Enter to skip): ").strip()
+            self.log(f"\nCover URL: {Fore.RED}(empty){Style.RESET_ALL}")
+            cover_url = input("Enter cover image URL or local path (or press Enter to skip): ").strip()
             if cover_url:
-                metadata["cover_url"] = cover_url
+                # Check if it's a local file
+                if Path(cover_url).exists():
+                    self.log(f"✓ Using local cover: {cover_url}", Fore.GREEN)
+                    metadata["cover_path"] = cover_url
+                else:
+                    metadata["cover_url"] = cover_url
+        
+        return metadata
+    
+    def prompt_for_missing_metadata(self, metadata: Dict) -> Dict:
+        """Prompt user to fill in missing critical metadata."""
+        self.log("\n⚠️  Some metadata is missing. Please provide the following:", Fore.YELLOW)
+        
+        # Required fields
+        if not metadata.get("title"):
+            metadata["title"] = input(f"{Fore.YELLOW}Book Title (required): {Style.RESET_ALL}").strip()
+            while not metadata["title"]:
+                metadata["title"] = input(f"{Fore.RED}Title cannot be empty. Please enter: {Style.RESET_ALL}").strip()
+        
+        if not metadata.get("author"):
+            metadata["author"] = input(f"{Fore.YELLOW}Author (required): {Style.RESET_ALL}").strip()
+            while not metadata["author"]:
+                metadata["author"] = input(f"{Fore.RED}Author cannot be empty. Please enter: {Style.RESET_ALL}").strip()
+        
+        # Optional fields
+        if not metadata.get("narrator"):
+            narrator = input(f"Narrator (optional, press Enter to skip): ").strip()
+            if narrator:
+                metadata["narrator"] = narrator
+        
+        if not metadata.get("description"):
+            description = input(f"Description (optional, press Enter to skip): ").strip()
+            if description:
+                metadata["description"] = description
         
         return metadata
     
@@ -284,6 +422,7 @@ class M4BCreator:
         metadata_map = {
             "title": "©nam",
             "author": "©ART",
+            "narrator": "©wrt",  # Writer field for narrator
             "publisher": "©pub",
             "year": "©day",
             "description": "©cmt"
@@ -399,36 +538,109 @@ Examples:
         creator.log(f"✗ No audio files found in {args.input}", Fore.RED)
         return 1
     
-    # Get book title
-    title = args.title
-    if not title and not args.no_search:
-        title = input(f"\n{Fore.YELLOW}Enter book title for metadata search: {Style.RESET_ALL}").strip()
+    # Step 1: Try to extract metadata from the audio files themselves
+    creator.log("\n" + "="*60, Fore.CYAN)
+    creator.log("Step 1: Extracting metadata from audio files", Fore.CYAN)
+    creator.log("="*60, Fore.CYAN)
     
-    # Fetch metadata from Open Library
-    metadata = {}
-    if title and not args.no_search:
-        metadata = creator.fetch_open_library_metadata(title)
+    file_metadata = creator.extract_metadata_from_files(files)
     
-    # Fallback metadata
+    # Step 2: Try to enhance with Open Library data
+    metadata = file_metadata.copy()
+    
+    if not args.no_search:
+        creator.log("\n" + "="*60, Fore.CYAN)
+        creator.log("Step 2: Searching Open Library for additional metadata", Fore.CYAN)
+        creator.log("="*60, Fore.CYAN)
+        
+        # Use title from args, files, or prompt
+        search_title = args.title or file_metadata.get("title") or ""
+        
+        if not search_title:
+            search_title = input(f"\n{Fore.YELLOW}Enter book title for metadata search (or press Enter to skip): {Style.RESET_ALL}").strip()
+        
+        if search_title:
+            library_metadata = creator.fetch_open_library_metadata(search_title)
+            
+            # Merge metadata, preferring Open Library data but keeping file data if library is empty
+            for key in ["title", "author", "publisher", "year", "description", "cover_url"]:
+                if library_metadata.get(key):
+                    metadata[key] = library_metadata[key]
+                elif not metadata.get(key):
+                    # Set defaults for required fields
+                    if key == "title":
+                        metadata[key] = search_title
+                    elif key == "author":
+                        metadata[key] = "Unknown Author"
+    
+    # Step 3: Check for missing required metadata
+    creator.log("\n" + "="*60, Fore.CYAN)
+    creator.log("Step 3: Validating metadata", Fore.CYAN)
+    creator.log("="*60, Fore.CYAN)
+    
+    missing_required = []
     if not metadata.get("title"):
-        metadata["title"] = title or "Unknown Audiobook"
+        missing_required.append("title")
     if not metadata.get("author"):
-        metadata["author"] = "Unknown Author"
+        missing_required.append("author")
     
-    # Edit metadata if requested
+    if missing_required:
+        creator.log(f"⚠️  Missing required fields: {', '.join(missing_required)}", Fore.YELLOW)
+        metadata = creator.prompt_for_missing_metadata(metadata)
+    else:
+        creator.log("✓ All required metadata present", Fore.GREEN)
+    
+    # Display current metadata summary
+    creator.log("\n" + "="*60, Fore.CYAN)
+    creator.log("Current Metadata Summary", Fore.CYAN)
+    creator.log("="*60, Fore.CYAN)
+    creator.log(f"Title:       {Fore.GREEN}{metadata.get('title', 'N/A')}{Style.RESET_ALL}")
+    creator.log(f"Author:      {Fore.GREEN}{metadata.get('author', 'N/A')}{Style.RESET_ALL}")
+    creator.log(f"Narrator:    {Fore.CYAN}{metadata.get('narrator', 'N/A')}{Style.RESET_ALL}")
+    creator.log(f"Publisher:   {Fore.CYAN}{metadata.get('publisher', 'N/A')}{Style.RESET_ALL}")
+    creator.log(f"Year:        {Fore.CYAN}{metadata.get('year', 'N/A')}{Style.RESET_ALL}")
+    creator.log(f"Description: {Fore.CYAN}{metadata.get('description', 'N/A')[:50]}...{Style.RESET_ALL}" if metadata.get('description') else f"Description: {Fore.CYAN}N/A{Style.RESET_ALL}")
+    creator.log(f"Cover:       {Fore.GREEN}Yes{Style.RESET_ALL}" if metadata.get('cover_url') or metadata.get('cover_path') else f"Cover:       {Fore.YELLOW}No{Style.RESET_ALL}")
+    
+    # Step 4: Edit metadata if requested
     if not args.no_edit:
-        metadata = creator.edit_metadata(metadata)
+        creator.log("\n" + "="*60, Fore.CYAN)
+        creator.log("Step 4: Review and edit metadata", Fore.CYAN)
+        creator.log("="*60, Fore.CYAN)
+        
+        edit_choice = input(f"\n{Fore.YELLOW}Do you want to edit the metadata? (y/N): {Style.RESET_ALL}").strip().lower()
+        if edit_choice == 'y':
+            metadata = creator.edit_metadata(metadata, allow_empty=True)
     
-    # Download cover
+    # Step 5: Handle cover art
+    creator.log("\n" + "="*60, Fore.CYAN)
+    creator.log("Step 5: Processing cover art", Fore.CYAN)
+    creator.log("="*60, Fore.CYAN)
+    
     cover_path = None
-    if metadata.get("cover_url"):
+    if metadata.get("cover_path"):
+        # Local cover file specified
+        cover_path = creator.download_cover(metadata["cover_path"])
+    elif metadata.get("cover_url"):
+        # URL to download
         cover_path = creator.download_cover(metadata["cover_url"])
     
-    # Generate chapters
+    if not cover_path:
+        creator.log("⚠️  No cover art will be embedded", Fore.YELLOW)
+    
+    # Step 6: Generate chapters
+    creator.log("\n" + "="*60, Fore.CYAN)
+    creator.log("Step 6: Generating chapters", Fore.CYAN)
+    creator.log("="*60, Fore.CYAN)
     chapters_file = creator.generate_chapters(files)
     
     # Create file list
     file_list = creator.create_file_list(files)
+    
+    # Step 7: Create M4B file
+    creator.log("\n" + "="*60, Fore.MAGENTA)
+    creator.log("Step 7: Creating M4B audiobook file", Fore.MAGENTA)
+    creator.log("="*60, Fore.MAGENTA)
     
     # Determine output filename
     output_filename = args.name or f"{metadata['title']}.m4b"
