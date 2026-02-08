@@ -4,12 +4,17 @@ A Windows CLI tool for creating M4B audiobook files from MP3/audio files with au
 
 ## Features
 
-- ✨ **Automatic Metadata**: Fetches book metadata (title, author, cover art) from Open Library
+- ✨ **Automatic Metadata**: Fetches book metadata (title, author, cover) from Open Library
+- 📝 **File Metadata Extraction**: Reads existing metadata from audio files (MP3, M4A, M4B, FLAC, OGG, WAV)
+- 🔄 **Smart Fallback System**: Uses folder names and prompts when information is missing
 - 📖 **Chapter Generation**: Creates chapters from individual audio files
-- 🎨 **Cover Art**: Embeds cover images into the M4B file
+- 🎨 **Cover Art**: Embeds cover images from URLs or local files
 - ✏️ **Interactive Editing**: Edit metadata before creating the audiobook
+- ⚠️ **Required Field Validation**: Ensures title and author are always present
+- 🎙️ **Narrator Support**: Includes narrator field in metadata
 - 🎧 **Optimized Output**: Creates properly formatted M4B files compatible with audiobook players
 - 🖥️ **Windows Compatible**: Full Windows support with colored console output
+- 📊 **Step-by-Step Progress**: Clear visual feedback during the conversion process
 
 ## Requirements
 
@@ -51,14 +56,32 @@ Required packages:
 
 ### Basic Usage
 
-1. Place your audio files (MP3, M4A, WAV, FLAC, OGG) in the `input` folder
+1. Place your audio files (MP3, M4A, M4B, WAV, FLAC, OGG) in the `input` folder
 2. Run the script:
    ```bash
    python m4b_creator.py
    ```
-3. Enter the book title when prompted
-4. Edit metadata if needed
-5. Find your M4B file in the `output` folder
+3. The tool will automatically:
+   - Extract metadata from your audio files
+   - Search Open Library for additional information
+   - Prompt for any missing required fields
+   - Allow you to review and edit metadata
+4. Find your M4B file in the `output` folder
+
+### How Metadata is Gathered
+
+The tool uses a multi-step process to ensure complete metadata:
+
+1. **Extract from Audio Files**: Reads embedded tags from your files
+2. **Search Open Library**: Enhances with online book database
+3. **Use Folder Name**: Falls back to input directory name
+4. **Prompt User**: Asks for required fields if still missing
+5. **Interactive Review**: Lets you edit before creating M4B
+
+This means it works even when:
+- ✅ Open Library has no results
+- ✅ Audio files lack metadata
+- ✅ Only the folder name is available
 
 ### Command Line Options
 
@@ -154,13 +177,28 @@ python m4b_creator.py --bitrate 32k --sample-rate 22050
 
 ## Metadata
 
-The tool automatically fetches metadata from Open Library:
-- **Title**: Book title
-- **Author**: Author name(s)
-- **Publisher**: Publisher name
-- **Year**: Publication year
-- **Description**: Book subjects/categories
-- **Cover Art**: High-resolution cover image
+The tool automatically gathers metadata from multiple sources:
+
+### Primary Sources (in order of preference)
+1. **Audio File Tags**: MP3 ID3, M4A/M4B iTunes tags, FLAC comments, etc.
+2. **Open Library API**: Fetches from online book database
+3. **Folder Name**: Uses input directory name as fallback
+4. **User Input**: Prompts for required fields
+
+### Supported Metadata Fields
+- **Title**: Book title (required)
+- **Author**: Author name(s) (required)
+- **Narrator**: Voice actor/narrator (optional)
+- **Publisher**: Publisher name (optional)
+- **Year**: Publication year (optional)
+- **Description**: Book description or subjects (optional)
+- **Cover Art**: High-resolution cover image (optional)
+
+### Cover Art Support
+- Download from Open Library automatically
+- Provide custom URL during editing
+- Use local image file (JPG, PNG)
+- Skip if not available
 
 You can edit all metadata before creating the M4B file.
 
@@ -190,9 +228,15 @@ Chapters are automatically named from file names:
 ✗ No results found
 ```
 **Solution**: 
-- Try a different search term
-- Use `--no-search` and manually enter metadata
-- Check your internet connection
+- The tool will use audio file metadata or folder name
+- You can manually enter information when prompted
+- Use `--no-search` to skip Open Library entirely
+
+### No Embedded Metadata
+```
+✗ No embedded metadata found
+```
+**Solution**: The tool will automatically use the folder name and prompt for required fields
 
 ### FFmpeg Error
 ```
