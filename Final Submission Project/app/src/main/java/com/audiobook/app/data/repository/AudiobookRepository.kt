@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.audiobook.app.data.local.AudiobookDao
 import com.audiobook.app.data.local.AudiobookEntity
@@ -18,6 +19,9 @@ import com.audiobook.app.data.local.toEntity
 import com.audiobook.app.data.model.Audiobook
 import com.audiobook.app.data.model.Chapter
 import com.audiobook.app.data.parser.ChapterParser
+import com.audiobook.app.data.parser.M2BExporter
+import com.audiobook.app.data.parser.M2BImporter
+import com.audiobook.app.data.parser.ImportResult
 import com.audiobook.app.data.remote.BookMetadataRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -39,6 +43,8 @@ class AudiobookRepository(
 ) {
     
     private val chapterParser = ChapterParser(context)
+    private val m2bExporter = M2BExporter(context)
+    private val m2bImporter = M2BImporter(context)
     
     companion object {
         /**
@@ -750,5 +756,172 @@ class AudiobookRepository(
                 }
             }
         }
+    }
+    
+    // ==================== M2B EXPORT/IMPORT METHODS ====================
+    
+    /**
+     * Export an audiobook with its current progress to an M2B bookmark file.
+     * 
+     * @param bookId The ID of the audiobook to export
+     * @param outputUri URI where the M2B file should be saved
+     * @param includeCoverArt Whether to include cover art in the M2B file
+     * @return true if export was successful, false otherwise
+     */
+    suspend fun exportToM2B(
+        bookId: String,
+        outputUri: Uri,
+        includeCoverArt: Boolean = true
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // Get audiobook with latest progress
+            val audiobook = getAudiobook(bookId) ?: return@withContext false
+            val progress = progressDao?.getProgress(bookId)
+            val currentPositionMs = progress?.currentPositionMs ?: 0L
+            val playbackSpeed = progress?.playbackSpeed ?: 1.0f
+            
+            // Export to M2B file
+            m2bExporter.exportToM2B(
+                audiobook = audiobook,
+                currentPositionMs = currentPositionMs,
+                playbackSpeed = playbackSpeed,
+                outputUri = outputUri,
+                includeCoverArt = includeCoverArt
+            )
+        } catch (e: Exception) {
+            Log.e("AudiobookRepository", "Failed to export M2B", e)
+            false
+        }
+    }
+    
+    /**
+     * Export an audiobook to a temporary M2B file in the cache directory.
+     * Useful for sharing the M2B file.
+     * 
+     * @param bookId The ID of the audiobook to export
+     * @param includeCoverArt Whether to include cover art
+     * @return The File object if successful, null otherwise
+     */
+    suspend fun exportToM2BCache(
+        bookId: String,
+        includeCoverArt: Boolean = true
+    ): File? = withContext(Dispatchers.IO) {
+        try {
+            val audiobook = getAudiobook(bookId) ?: return@withContext null
+            val progress = progressDao?.getProgress(bookId)
+            val currentPositionMs = progress?.currentPositionMs ?: 0L
+            val playbackSpeed = progress?.playbackSpeed ?: 1.0f
+            
+            m2bExporter.exportToCache(
+                audiobook = audiobook,
+                currentPositionMs = currentPositionMs,
+                playbackSpeed = playbackSpeed,
+                includeCoverArt = includeCoverArt
+            )
+        } catch (e: Exception) {
+            Log.e("AudiobookRepository", "Failed to export M2B to cache", e)
+            null
+        }
+    }
+    
+    /**
+     * Import an audiobook from an M2B bookmark file.
+     * This will restore the audiobook metadata and playback position.
+     * 
+     * @param m2bUri URI of the M2B file to import
+     * @return The imported audiobook if successful, null otherwise
+     */
+    suspend fun importFromM2B(m2bUri: Uri): Audiobook? = withContext(Dispatchers.IO) {
+        try {
+            val result = m2bImporter.importFromM2B(m2bUri)
+            
+            when (result) {
+                is ImportResult.Success -> {
+                    val audiobook = result.audiobook
+                    val m2bFile = result.m2bFile
+                    
+                    // Check if this audiobook already exists in the library
+                    val existingBook = getAudiobook(audiobook.id)
+                    
+                    if (existingBook != null) {
+                        // Update progress for existing book
+                        updateProgress(
+                            bookId = audiobook.id,
+                            progress = m2bFile.bookmark.progress,
+                            currentChapter = m2bFile.bookmark.chapter,
+                            positionMs = m2bFile.bookmark.positionMs
+                        )
+                        
+                        // Update playback speed
+                        progressDao?.let { dao ->
+                            dao.updatePlaybackSpeed(audiobook.id, m2bFile.bookmark.playbackSpeed)
+                        }
+                        
+                        Log.d("AudiobookRepository", "Updated progress for existing book: ${audiobook.title}")
+                        existingBook
+                    } else {
+                        // New audiobook, add to library
+                        audiobookDao?.insertAudiobook(audiobook.toEntity())
+                        
+                        // Insert chapters if present
+                        if (audiobook.chapters.isNotEmpty()) {
+                            updateChapters(audiobook.id, audiobook.chapters)
+                        }
+                        
+                        // Insert progress
+                        progressDao?.insertProgress(
+                            ProgressEntity(
+                                bookId = audiobook.id,
+                                currentPositionMs = m2bFile.bookmark.positionMs,
+                                currentChapter = m2bFile.bookmark.chapter,
+                                progress = m2bFile.bookmark.progress,
+                                playbackSpeed = m2bFile.bookmark.playbackSpeed
+                            )
+                        )
+                        
+                        // Save cover art if present
+                        result.coverArt?.let { bitmap ->
+                            val coverUrl = saveCoverArt(audiobook.id, bitmap)
+                            audiobookDao?.updateAudiobook(
+                                audiobook.toEntity().copy(coverUrl = coverUrl)
+                            )
+                        }
+                        
+                        // Update in-memory list
+                        _audiobooks.value = _audiobooks.value + audiobook
+                        
+                        Log.d("AudiobookRepository", "Imported new audiobook from M2B: ${audiobook.title}")
+                        audiobook
+                    }
+                }
+                is ImportResult.Error -> {
+                    Log.e("AudiobookRepository", "M2B import error: ${result.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("AudiobookRepository", "Failed to import M2B", e)
+            null
+        }
+    }
+    
+    /**
+     * Validate an M2B file without importing it.
+     * 
+     * @param m2bUri URI of the M2B file to validate
+     * @return true if the file is a valid M2B file, false otherwise
+     */
+    suspend fun validateM2BFile(m2bUri: Uri): Boolean {
+        return withContext(Dispatchers.IO) {
+            m2bImporter.validateM2BFile(m2bUri)
+        }
+    }
+    
+    /**
+     * Generate a suggested filename for M2B export.
+     */
+    fun generateM2BFilename(bookId: String): String? {
+        val audiobook = _audiobooks.value.find { it.id == bookId }
+        return audiobook?.let { m2bExporter.generateFilename(it) }
     }
 }
