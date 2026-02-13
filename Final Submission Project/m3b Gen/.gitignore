@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Application cache and config
+.m4b_generator/
+
+# Output files
+*.m4b
+
+# Test data
+test_mp3s/
+test_output/
+
+# Distribution
+dist/
+build/
+*.egg-info/

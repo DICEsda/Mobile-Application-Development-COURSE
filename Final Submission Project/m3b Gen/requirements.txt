@@ -1,0 +1,5 @@
+textual>=0.47.0
+mutagen>=1.47.0
+requests>=2.31.0
+Pillow>=10.0.0
+term-image>=0.7.0

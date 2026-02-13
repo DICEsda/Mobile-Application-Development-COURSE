@@ -10,11 +10,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.audiobook.app.appContainer
 import com.audiobook.app.data.model.UserProfile
 import com.audiobook.app.data.model.UserStats
 import com.audiobook.app.ui.components.BottomNavBar
@@ -31,6 +35,10 @@ fun ProfileScreen(
     // Use default profile - in a real app this would come from AuthRepository
     val profile = UserProfile.default
     
+    // Get playing state from audio player
+    val context = LocalContext.current
+    val isPlaying by context.appContainer.audiobookPlayer.isPlaying.collectAsState()
+    
     Scaffold(
         containerColor = Background,
         bottomBar = {
@@ -42,7 +50,8 @@ fun ProfileScreen(
                         NavItem.Player -> onPlayerClick()
                         NavItem.Profile -> {}
                     }
-                }
+                },
+                hasPlayingIndicator = isPlaying
             )
         }
     ) { paddingValues ->

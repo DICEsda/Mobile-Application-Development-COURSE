@@ -2,11 +2,15 @@ package com.audiobook.app.navigation
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.audiobook.app.appContainer
 import com.audiobook.app.ui.screens.*
+import com.audiobook.app.ui.viewmodel.PlayerViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
@@ -42,25 +46,35 @@ fun AppNavigation(
             )
         }
         
-        composable(Screen.Library.route) {
+        composable(Screen.Library.route) { backStackEntry ->
+            // Check if we came from the Player screen
+            val previousRoute = navController.previousBackStackEntry?.destination?.route
+            val cameFromPlayer = previousRoute?.startsWith("player/") == true
+            
             LibraryScreen(
                 onBookClick = { bookId ->
                     // Navigate directly to player (book details are shown in popup)
-                    navController.navigate(Screen.Player.createRoute(bookId))
+                    navController.navigate(Screen.Player.createRoute(bookId)) {
+                        // Use launchSingleTop to reuse the player screen if it exists
+                        launchSingleTop = true
+                    }
                 },
                 onPlayerClick = {
-                    // Navigate to player with the first available book or show library
+                    // Navigate to player with the currently playing or last played book
                     scope.launch {
-                        val books = audiobookRepository.audiobooks.value
-                        val bookId = books.firstOrNull()?.id
-                        if (bookId != null) {
-                            navController.navigate(Screen.Player.createRoute(bookId))
+                        val currentBookId = audiobookRepository.currentBook.value?.id
+                            ?: context.appContainer.preferencesRepository.lastPlayedBookId.first()
+                            ?: audiobookRepository.audiobooks.value.firstOrNull()?.id
+                        
+                        if (currentBookId != null) {
+                            navController.navigate(Screen.Player.createRoute(currentBookId))
                         }
                     }
                 },
                 onProfileClick = {
                     navController.navigate(Screen.Profile.route)
-                }
+                },
+                shouldScrollToCurrentBook = cameFromPlayer
             )
         }
         
@@ -103,9 +117,7 @@ fun AppNavigation(
             PlayerScreen(
                 bookId = bookId,
                 onLibraryClick = {
-                    navController.navigate(Screen.Library.route) {
-                        popUpTo(Screen.Library.route) { inclusive = true }
-                    }
+                    navController.navigate(Screen.Library.route)
                 },
                 onProfileClick = {
                     navController.navigate(Screen.Profile.route)
@@ -121,12 +133,14 @@ fun AppNavigation(
                     }
                 },
                 onPlayerClick = {
-                    // Navigate to player with the first available book
+                    // Navigate to player with the currently playing or last played book
                     scope.launch {
-                        val books = audiobookRepository.audiobooks.value
-                        val bookId = books.firstOrNull()?.id
-                        if (bookId != null) {
-                            navController.navigate(Screen.Player.createRoute(bookId))
+                        val currentBookId = audiobookRepository.currentBook.value?.id
+                            ?: context.appContainer.preferencesRepository.lastPlayedBookId.first()
+                            ?: audiobookRepository.audiobooks.value.firstOrNull()?.id
+                        
+                        if (currentBookId != null) {
+                            navController.navigate(Screen.Player.createRoute(currentBookId))
                         }
                     }
                 },
@@ -150,12 +164,14 @@ fun AppNavigation(
                     }
                 },
                 onPlayerClick = {
-                    // Navigate to player with the first available book
+                    // Navigate to player with the currently playing or last played book
                     scope.launch {
-                        val books = audiobookRepository.audiobooks.value
-                        val bookId = books.firstOrNull()?.id
-                        if (bookId != null) {
-                            navController.navigate(Screen.Player.createRoute(bookId))
+                        val currentBookId = audiobookRepository.currentBook.value?.id
+                            ?: context.appContainer.preferencesRepository.lastPlayedBookId.first()
+                            ?: audiobookRepository.audiobooks.value.firstOrNull()?.id
+                        
+                        if (currentBookId != null) {
+                            navController.navigate(Screen.Player.createRoute(currentBookId))
                         }
                     }
                 },

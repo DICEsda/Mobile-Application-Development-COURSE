@@ -4,13 +4,13 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,6 +47,7 @@ fun LibraryScreen(
     onBookClick: (String) -> Unit,
     onPlayerClick: () -> Unit,
     onProfileClick: () -> Unit,
+    shouldScrollToCurrentBook: Boolean = false, // Flag to trigger scroll from navigation
     viewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.Factory(
             audiobookRepository = LocalContext.current.appContainer.audiobookRepository,
@@ -63,6 +64,46 @@ fun LibraryScreen(
     val timeRemaining by viewModel.currentBookTimeRemaining.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    
+    // Get playing state from audio player
+    val isPlaying by context.appContainer.audiobookPlayer.isPlaying.collectAsState()
+    
+    // LazyColumn scroll state
+    val listState = rememberLazyListState()
+    
+    // Track if we've already performed the initial scroll
+    var hasPerformedInitialScroll by remember { mutableStateOf(false) }
+    
+    // Auto-scroll to currently playing book ONLY when coming from player (once)
+    LaunchedEffect(shouldScrollToCurrentBook) {
+        if (shouldScrollToCurrentBook && !hasPerformedInitialScroll && audiobooks.isNotEmpty()) {
+            val book = currentBook
+            if (book != null) {
+                // Small delay to ensure layout is ready
+                kotlinx.coroutines.delay(150)
+                
+                // Find the index of the current book
+                val bookIndex = audiobooks.indexOfFirst { it.id == book.id }
+                if (bookIndex != -1) {
+                    // Calculate which row it's in (3 books per row)
+                    val rowIndex = bookIndex / 3
+                    
+                    // Calculate the item index in LazyColumn
+                    // We need to account for: Header + Search + Continue Reading (if exists) + "All Audiobooks" header
+                    val headerItems = 4 // Header + Search + Continue Reading + "All Audiobooks" header
+                    val scrollToIndex = headerItems + rowIndex
+                    
+                    // Scroll to center the item vertically with offset
+                    listState.animateScrollToItem(
+                        index = scrollToIndex.coerceAtLeast(0),
+                        scrollOffset = -500 // Negative offset to center vertically
+                    )
+                    hasPerformedInitialScroll = true
+        }
+    }
+}
+
+    }
     
     // State for the book detail bottom sheet
     var selectedBook by remember { mutableStateOf<Audiobook?>(null) }
@@ -131,7 +172,8 @@ fun LibraryScreen(
                         NavItem.Player -> onPlayerClick()
                         NavItem.Profile -> onProfileClick()
                     }
-                }
+                },
+                hasPlayingIndicator = isPlaying
             )
         }
     ) { paddingValues ->
@@ -141,6 +183,7 @@ fun LibraryScreen(
                 .padding(paddingValues)
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
@@ -155,18 +198,32 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text(
-                                text = "Library",
-                                style = MaterialTheme.typography.displaySmall,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "$audiobookCount audiobooks",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Library",
+                                    style = MaterialTheme.typography.displaySmall,
+                                    color = TextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "$audiobookCount audiobooks",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary
+                                )
+                            }
+                            
+                            // Loading indicator
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = AccentOrange,
+                                    strokeWidth = 2.dp
+                                )
+                            }
                         }
                         
                         Row(
@@ -327,10 +384,10 @@ fun LibraryScreen(
                     }
                 }
                 
-                // Audiobooks grid - using Column with Row pairs instead of LazyVerticalGrid
+                // Audiobooks grid - using Column with Row triplets instead of LazyVerticalGrid
                 // to avoid nested scrolling issues and height calculation problems
                 if (audiobooks.isNotEmpty()) {
-                    val chunkedBooks = audiobooks.chunked(2)
+                    val chunkedBooks = audiobooks.chunked(3)
                     chunkedBooks.forEach { rowBooks ->
                         item {
                             Row(
@@ -338,7 +395,7 @@ fun LibraryScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 24.dp)
                                     .padding(bottom = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 rowBooks.forEach { book ->
                                     AudiobookGridItem(
@@ -347,26 +404,14 @@ fun LibraryScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
-                                // If odd number, add empty spacer to maintain layout
-                                if (rowBooks.size == 1) {
+                                // Fill empty spaces to maintain layout
+                                repeat(3 - rowBooks.size) {
                                     Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
                 }
-            }
-            
-            // Loading indicator
-            AnimatedVisibility(
-                visible = isLoading,
-                modifier = Modifier.align(Alignment.Center),
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                CircularProgressIndicator(
-                    color = AccentOrange
-                )
             }
             
             // Error snackbar
@@ -788,14 +833,34 @@ private fun AudiobookGridItem(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                minLines = 2 // Ensure consistent height even for short titles
-            )
+            // Title with fade-out effect
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                // Gradient fade overlay on the right side
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(40.dp)
+                        .height(20.dp)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Background
+                                )
+                            )
+                        )
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = book.author,
@@ -805,12 +870,73 @@ private fun AudiobookGridItem(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = book.duration,
-                style = MaterialTheme.typography.labelSmall,
-                color = TextTertiary,
-                maxLines = 1
-            )
+            
+            // Progress timeline with duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = book.duration,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextTertiary,
+                    maxLines = 1
+                )
+                
+                AnimatedVisibility(
+                    visible = book.progress > 0f,
+                    enter = fadeIn(animationSpec = tween(300)) + expandHorizontally(animationSpec = tween(300)),
+                    exit = fadeOut(animationSpec = tween(300)) + shrinkHorizontally(animationSpec = tween(300))
+                ) {
+                    Text(
+                        text = "${(book.progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AccentOrange,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                    )
+                }
+            }
+            
+            // Progress timeline bar
+            AnimatedVisibility(
+                visible = book.progress > 0f,
+                enter = fadeIn(animationSpec = tween(400)) + expandVertically(animationSpec = tween(400)),
+                exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(1.5.dp))
+                            .background(Surface3)
+                    ) {
+                        // Animated progress fill
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = book.progress,
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                            label = "progressAnimation"
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(animatedProgress)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(1.5.dp))
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        colors = listOf(
+                                            AccentOrange,
+                                            AccentOrange.copy(alpha = 0.7f)
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                }
+            }
             // Short description preview (if available)
             book.description?.let { desc ->
                 Spacer(modifier = Modifier.height(6.dp))

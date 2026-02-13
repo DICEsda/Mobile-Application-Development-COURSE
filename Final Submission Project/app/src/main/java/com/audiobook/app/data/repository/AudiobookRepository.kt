@@ -77,11 +77,19 @@ class AudiobookRepository(
     /**
      * Flow of audiobooks from Room database.
      * Falls back to in-memory list if DAO is not available.
+     * Observes both audiobooks and progress tables for real-time updates.
      */
     val audiobooksFlow: Flow<List<Audiobook>> = audiobookDao?.let { dao ->
-        dao.getAllAudiobooksWithChapters().map { audiobooksWithChapters ->
+        // Combine audiobooks with progress changes for real-time updates
+        combine(
+            dao.getAllAudiobooksWithChapters(),
+            progressDao?.getAllProgress() ?: flowOf(emptyList())
+        ) { audiobooksWithChapters, allProgress ->
+            // Create a map of bookId to progress for quick lookup
+            val progressMap = allProgress.associateBy { it.bookId }
+            
             audiobooksWithChapters.map { awc ->
-                val progress = progressDao?.getProgress(awc.audiobook.id)
+                val progress = progressMap[awc.audiobook.id]
                 awc.toDomainModel(progress)
             }
         }

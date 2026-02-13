@@ -45,18 +45,25 @@ fun PlayerScreen(
     val context = LocalContext.current
     val container = context.appContainer
     
+    // Scope ViewModel to the Activity so it survives navigation
+    val activity = context as? androidx.activity.ComponentActivity
     val viewModel: PlayerViewModel = viewModel(
+        viewModelStoreOwner = activity ?: error("PlayerScreen must be hosted in ComponentActivity"),
         factory = PlayerViewModel.Factory(
             audiobookPlayer = container.audiobookPlayer,
             audiobookRepository = container.audiobookRepository,
             preferencesRepository = container.preferencesRepository,
-            chapterParser = container.chapterParser
+            chapterParser = container.chapterParser,
+            notificationTriggerHelper = container.notificationTriggerHelper
         )
     )
     
-    // Load the book when screen appears
+    // Load the book when screen appears or when bookId changes
     LaunchedEffect(bookId) {
-        viewModel.loadBook(bookId)
+        // Only load if it's a different book
+        if (viewModel.currentBook.value?.id != bookId) {
+            viewModel.loadBook(bookId)
+        }
     }
     
     // Collect state from ViewModel

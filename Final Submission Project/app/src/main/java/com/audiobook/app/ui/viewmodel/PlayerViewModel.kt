@@ -10,6 +10,7 @@ import com.audiobook.app.data.parser.ChapterParser
 import com.audiobook.app.data.repository.AudiobookRepository
 import com.audiobook.app.data.repository.PreferencesRepository
 import com.audiobook.app.service.AudiobookPlayer
+import com.audiobook.app.service.NotificationTriggerHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,8 @@ class PlayerViewModel(
     private val audiobookPlayer: AudiobookPlayer,
     private val audiobookRepository: AudiobookRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val chapterParser: ChapterParser
+    private val chapterParser: ChapterParser,
+    private val notificationTriggerHelper: NotificationTriggerHelper
 ) : ViewModel() {
     
     // Current audiobook being played
@@ -76,6 +78,58 @@ class PlayerViewModel(
                 }
             }.collect { chapter ->
                 _currentChapter.value = chapter
+            }
+        }
+        
+        // Save progress periodically during playback
+        viewModelScope.launch {
+            combine(
+                currentPosition,
+                duration,
+                _currentBook,
+                _currentChapter
+            ) { position, dur, book, chapter ->
+                if (book != null && dur > 0) {
+                    val progressValue = (position.toFloat() / dur.toFloat()).coerceIn(0f, 1f)
+                    Triple(book.id, progressValue, chapter?.number ?: 0)
+                } else {
+                    null
+                }
+            }
+            .filterNotNull()
+            .debounce(500) // Save every 500ms for instant updates
+            .collect { (bookId, progressValue, chapterNum) ->
+                audiobookRepository.updateProgress(
+                    bookId = bookId,
+                    progress = progressValue,
+                    currentChapter = chapterNum,
+                    positionMs = currentPosition.value
+                )
+                
+                // Trigger book completion notification when reaching 98%+ (close to end)
+                if (progressValue >= 0.98f && _currentBook.value != null) {
+                    val book = _currentBook.value!!
+                    notificationTriggerHelper.onBookCompleted(book.title)
+                }
+            }
+        }
+        
+        // Track listening session time
+        var lastPlaybackTime = System.currentTimeMillis()
+        viewModelScope.launch {
+            isPlaying.collect { playing ->
+                if (playing) {
+                    lastPlaybackTime = System.currentTimeMillis()
+                } else {
+                    // When pausing, calculate session duration
+                    val sessionDurationMs = System.currentTimeMillis() - lastPlaybackTime
+                    val sessionMinutes = (sessionDurationMs / (1000 * 60)).toInt()
+                    
+                    // Only count sessions longer than 1 minute
+                    if (sessionMinutes >= 1) {
+                        notificationTriggerHelper.onListeningSessionCompleted(sessionMinutes)
+                    }
+                }
             }
         }
         
@@ -251,7 +305,8 @@ class PlayerViewModel(
         private val audiobookPlayer: AudiobookPlayer,
         private val audiobookRepository: AudiobookRepository,
         private val preferencesRepository: PreferencesRepository,
-        private val chapterParser: ChapterParser
+        private val chapterParser: ChapterParser,
+        private val notificationTriggerHelper: NotificationTriggerHelper
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -260,7 +315,8 @@ class PlayerViewModel(
                     audiobookPlayer,
                     audiobookRepository,
                     preferencesRepository,
-                    chapterParser
+                    chapterParser,
+                    notificationTriggerHelper
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")

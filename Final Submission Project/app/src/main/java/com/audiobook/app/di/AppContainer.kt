@@ -10,9 +10,12 @@ import com.audiobook.app.data.remote.ApiClient
 import com.audiobook.app.data.remote.BookMetadataRepository
 import com.audiobook.app.data.repository.AudiobookRepository
 import com.audiobook.app.data.repository.AuthRepository
+import com.audiobook.app.data.repository.NotificationRepository
 import com.audiobook.app.data.repository.PreferencesRepository
 import com.audiobook.app.data.repository.ProgressSyncRepository
 import com.audiobook.app.service.AudiobookPlayer
+import com.audiobook.app.service.NotificationScheduler
+import com.audiobook.app.service.NotificationTriggerHelper
 
 /**
  * Manual Dependency Injection Container
@@ -113,6 +116,30 @@ class AppContainer(private val context: Context) {
      */
     val progressSyncRepository: ProgressSyncRepository by lazy {
         ProgressSyncRepository(progressDao)
+    }
+    
+    /**
+     * Notification Repository - manages FCM tokens and notification preferences.
+     * Handles push notifications and local notification scheduling.
+     */
+    val notificationRepository: NotificationRepository by lazy {
+        NotificationRepository(context)
+    }
+    
+    /**
+     * Notification Scheduler - schedules local notifications using AlarmManager.
+     * Supports daily reminders, streak notifications, and milestone alerts.
+     */
+    val notificationScheduler: NotificationScheduler by lazy {
+        NotificationScheduler(context)
+    }
+    
+    /**
+     * Notification Trigger Helper - manages notification triggers based on user activity.
+     * Integrates with Firestore to track stats and trigger milestone notifications.
+     */
+    val notificationTriggerHelper: NotificationTriggerHelper by lazy {
+        NotificationTriggerHelper(context, notificationRepository, notificationScheduler)
     }
     
     // ========== Media ==========

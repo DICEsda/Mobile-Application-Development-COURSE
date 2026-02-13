@@ -1,0 +1,382 @@
+{
+    "chapters": [
+        {
+            "id": 0,
+            "time_base": "1/1000",
+            "start": 0,
+            "start_time": "0.000000",
+            "end": 2010687,
+            "end_time": "2010.687000",
+            "tags": {
+                "title": "Preface"
+            }
+        },
+        {
+            "id": 1,
+            "time_base": "1/1000",
+            "start": 2010687,
+            "start_time": "2010.687000",
+            "end": 33970954,
+            "end_time": "33970.954000",
+            "tags": {
+                "title": "Part One - the Seductive Character"
+            }
+        },
+        {
+            "id": 2,
+            "time_base": "1/1000",
+            "start": 33970954,
+            "start_time": "33970.954000",
+            "end": 36484847,
+            "end_time": "36484.847000",
+            "tags": {
+                "title": "The Seducer's Victim"
+            }
+        },
+        {
+            "id": 3,
+            "time_base": "1/1000",
+            "start": 36484847,
+            "start_time": "36484.847000",
+            "end": 36935694,
+            "end_time": "36935.694000",
+            "tags": {
+                "title": "Part Two - the Seductive process"
+            }
+        },
+        {
+            "id": 4,
+            "time_base": "1/1000",
+            "start": 36935694,
+            "start_time": "36935.694000",
+            "end": 38223400,
+            "end_time": "38223.400000",
+            "tags": {
+                "title": "Chapter 1 - Choose the Right Victim"
+            }
+        },
+        {
+            "id": 5,
+            "time_base": "1/1000",
+            "start": 38223400,
+            "start_time": "38223.400000",
+            "end": 39426391,
+            "end_time": "39426.391000",
+            "tags": {
+                "title": "Chapter 2 - Create a False Sense of Security — Approach Indirectly"
+            }
+        },
+        {
+            "id": 6,
+            "time_base": "1/1000",
+            "start": 39426391,
+            "start_time": "39426.391000",
+            "end": 41055491,
+            "end_time": "41055.491000",
+            "tags": {
+                "title": "Chapter 3 - Send Mixed Signals"
+            }
+        },
+        {
+            "id": 7,
+            "time_base": "1/1000",
+            "start": 41055491,
+            "start_time": "41055.491000",
+            "end": 42251246,
+            "end_time": "42251.246000",
+            "tags": {
+                "title": "Chapter 4 - Appear to Be an Object of Desire — Create Triangles"
+            }
+        },
+        {
+            "id": 8,
+            "time_base": "1/1000",
+            "start": 42251246,
+            "start_time": "42251.246000",
+            "end": 43582080,
+            "end_time": "43582.080000",
+            "tags": {
+                "title": "Chapter 5 - Create a Need — Stir Anxiety and Discontent"
+            }
+        },
+        {
+            "id": 9,
+            "time_base": "1/1000",
+            "start": 43582080,
+            "start_time": "43582.080000",
+            "end": 44844238,
+            "end_time": "44844.238000",
+            "tags": {
+                "title": "Chapter 6 - Master the Art of Insinuation"
+            }
+        },
+        {
+            "id": 10,
+            "time_base": "1/1000",
+            "start": 44844238,
+            "start_time": "44844.238000",
+            "end": 46306755,
+            "end_time": "46306.755000",
+            "tags": {
+                "title": "Chapter 7 - Enter Their Spirit"
+            }
+        },
+        {
+            "id": 11,
+            "time_base": "1/1000",
+            "start": 46306755,
+            "start_time": "46306.755000",
+            "end": 48032090,
+            "end_time": "48032.090000",
+            "tags": {
+                "title": "Chapter 8 - Create Temptation"
+            }
+        },
+        {
+            "id": 12,
+            "time_base": "1/1000",
+            "start": 48032090,
+            "start_time": "48032.090000",
+            "end": 49398921,
+            "end_time": "49398.921000",
+            "tags": {
+                "title": "Chapter 9 - Keep Them in Suspense—What Comes Next?"
+            }
+        },
+        {
+            "id": 13,
+            "time_base": "1/1000",
+            "start": 49398921,
+            "start_time": "49398.921000",
+            "end": 51720214,
+            "end_time": "51720.214000",
+            "tags": {
+                "title": "Chapter 10 - Use the Demonic Power of Words to Sow Confusion"
+            }
+        },
+        {
+            "id": 14,
+            "time_base": "1/1000",
+            "start": 51720214,
+            "start_time": "51720.214000",
+            "end": 53705938,
+            "end_time": "53705.938000",
+            "tags": {
+                "title": "Chapter 11 - Pay Attention to Detail"
+            }
+        },
+        {
+            "id": 15,
+            "time_base": "1/1000",
+            "start": 53705938,
+            "start_time": "53705.938000",
+            "end": 54964778,
+            "end_time": "54964.778000",
+            "tags": {
+                "title": "Chapter 12 - Poeticize Your Presence"
+            }
+        },
+        {
+            "id": 16,
+            "time_base": "1/1000",
+            "start": 54964778,
+            "start_time": "54964.778000",
+            "end": 56297179,
+            "end_time": "56297.179000",
+            "tags": {
+                "title": "Chapter 13 - Disarm Through Strategic Weakness and Vulnerability"
+            }
+        },
+        {
+            "id": 17,
+            "time_base": "1/1000",
+            "start": 56297179,
+            "start_time": "56297.179000",
+            "end": 58523307,
+            "end_time": "58523.307000",
+            "tags": {
+                "title": "Chapter 14 - Confuse Desire and Reality — The Perfect Illusion"
+            }
+        },
+        {
+            "id": 18,
+            "time_base": "1/1000",
+            "start": 58523307,
+            "start_time": "58523.307000",
+            "end": 60141540,
+            "end_time": "60141.540000",
+            "tags": {
+                "title": "Chapter 15 - Isolate the Victim"
+            }
+        },
+        {
+            "id": 19,
+            "time_base": "1/1000",
+            "start": 60141540,
+            "start_time": "60141.540000",
+            "end": 60277690,
+            "end_time": "60277.690000",
+            "tags": {
+                "title": "Part Three - The Precipice"
+            }
+        },
+        {
+            "id": 20,
+            "time_base": "1/1000",
+            "start": 60277690,
+            "start_time": "60277.690000",
+            "end": 62418685,
+            "end_time": "62418.685000",
+            "tags": {
+                "title": "Chapter 16 - Prove Yourself"
+            }
+        },
+        {
+            "id": 21,
+            "time_base": "1/1000",
+            "start": 62418685,
+            "start_time": "62418.685000",
+            "end": 65435540,
+            "end_time": "65435.540000",
+            "tags": {
+                "title": "Chapter 17 - Effect a Regression"
+            }
+        },
+        {
+            "id": 22,
+            "time_base": "1/1000",
+            "start": 65435540,
+            "start_time": "65435.540000",
+            "end": 67118740,
+            "end_time": "67118.740000",
+            "tags": {
+                "title": "Chapter 18 - Stir Up the Transgressive and Taboo"
+            }
+        },
+        {
+            "id": 23,
+            "time_base": "1/1000",
+            "start": 67118740,
+            "start_time": "67118.740000",
+            "end": 68585332,
+            "end_time": "68585.332000",
+            "tags": {
+                "title": "Chapter 19 - Use Spiritual Lures"
+            }
+        },
+        {
+            "id": 24,
+            "time_base": "1/1000",
+            "start": 68585332,
+            "start_time": "68585.332000",
+            "end": 70580251,
+            "end_time": "70580.251000",
+            "tags": {
+                "title": "Chapter 20 - Mix Pleasure with Pain"
+            }
+        },
+        {
+            "id": 25,
+            "time_base": "1/1000",
+            "start": 70580251,
+            "start_time": "70580.251000",
+            "end": 70699970,
+            "end_time": "70699.970000",
+            "tags": {
+                "title": "Part Four - Moving in for the Kill"
+            }
+        },
+        {
+            "id": 26,
+            "time_base": "1/1000",
+            "start": 70699970,
+            "start_time": "70699.970000",
+            "end": 72256815,
+            "end_time": "72256.815000",
+            "tags": {
+                "title": "Chapter 21 - Give Them Space to Fall — The Pursuer Is Pursued"
+            }
+        },
+        {
+            "id": 27,
+            "time_base": "1/1000",
+            "start": 72256815,
+            "start_time": "72256.815000",
+            "end": 74376155,
+            "end_time": "74376.155000",
+            "tags": {
+                "title": "Chapter 22 - Use Physical Lures"
+            }
+        },
+        {
+            "id": 28,
+            "time_base": "1/1000",
+            "start": 74376155,
+            "start_time": "74376.155000",
+            "end": 75714199,
+            "end_time": "75714.199000",
+            "tags": {
+                "title": "Chapter 23 - Master the Art of the Bold Move"
+            }
+        },
+        {
+            "id": 29,
+            "time_base": "1/1000",
+            "start": 75714199,
+            "start_time": "75714.199000",
+            "end": 78299563,
+            "end_time": "78299.563000",
+            "tags": {
+                "title": "Chapter 24 - Beware the Aftereffects"
+            }
+        },
+        {
+            "id": 30,
+            "time_base": "1/1000",
+            "start": 78299563,
+            "start_time": "78299.563000",
+            "end": 79735592,
+            "end_time": "79735.592000",
+            "tags": {
+                "title": "Appendix A"
+            }
+        },
+        {
+            "id": 31,
+            "time_base": "1/1000",
+            "start": 79735592,
+            "start_time": "79735.592000",
+            "end": 82288094,
+            "end_time": "82288.094000",
+            "tags": {
+                "title": "Appendix B"
+            }
+        }
+    ],
+    "format": {
+        "filename": "Art of Seduction (Robert Greene).m4b",
+        "nb_streams": 3,
+        "nb_programs": 0,
+        "nb_stream_groups": 0,
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "format_long_name": "QuickTime / MOV",
+        "start_time": "0.000000",
+        "duration": "82288.094000",
+        "size": "670916595",
+        "bit_rate": "65226",
+        "probe_score": 100,
+        "tags": {
+            "major_brand": "isom",
+            "minor_version": "512",
+            "compatible_brands": "isomiso2mp41",
+            "title": "Art of Seduction",
+            "artist": "Robert Greene",
+            "album_artist": "Robert Greene",
+            "composer": "Joseph Powers",
+            "album": "Art of Seduction",
+            "date": "2020",
+            "encoder": "Lavf62.8.102",
+            "genre": "Audiobook"
+        }
+    }
+}
