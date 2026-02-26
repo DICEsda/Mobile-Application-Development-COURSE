@@ -111,7 +111,7 @@ private fun NavBarItem(
                 imageVector = if (item == NavItem.Player && isSelected) Icons.Filled.PlayArrow else item.icon,
                 contentDescription = item.label,
                 tint = if (isSelected) AccentOrange else TextTertiary,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(28.dp)
             )
             if (hasIndicator) {
                 Box(

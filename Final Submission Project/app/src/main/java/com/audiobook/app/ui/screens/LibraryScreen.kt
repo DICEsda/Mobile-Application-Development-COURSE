@@ -80,7 +80,7 @@ fun LibraryScreen(
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
             } catch (e: Exception) {
                 // Some URIs may not support persistent permissions, continue anyway
-                e.printStackTrace()
+                android.util.Log.w("LibraryScreen", "Could not take persistable URI permission", e)
             }
             viewModel.setAudiobookFolder(it.toString())
         }

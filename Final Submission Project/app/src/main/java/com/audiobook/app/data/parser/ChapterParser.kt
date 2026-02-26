@@ -238,11 +238,8 @@ class ChapterParser(private val context: Context) {
      */
     @OptIn(UnstableApi::class)
     fun createMediaItem(audiobook: Audiobook, metadata: AudiobookMetadata): MediaItem {
-        val uri = when {
-            !audiobook.contentUri.isNullOrBlank() -> Uri.parse(audiobook.contentUri)
-            !audiobook.filePath.isNullOrBlank() -> Uri.fromFile(File(audiobook.filePath))
-            else -> throw IllegalArgumentException("No valid URI for audiobook")
-        }
+        val uri = audiobook.resolveUri()
+            ?: throw IllegalArgumentException("No valid URI for audiobook")
         
         return MediaItem.Builder()
             .setMediaId(audiobook.id)
@@ -264,11 +261,7 @@ class ChapterParser(private val context: Context) {
      */
     @OptIn(UnstableApi::class)
     fun createChapterMediaItems(audiobook: Audiobook, chapters: List<Chapter>): List<MediaItem> {
-        val uri = when {
-            !audiobook.contentUri.isNullOrBlank() -> Uri.parse(audiobook.contentUri)
-            !audiobook.filePath.isNullOrBlank() -> Uri.fromFile(File(audiobook.filePath))
-            else -> return emptyList()
-        }
+        val uri = audiobook.resolveUri() ?: return emptyList()
         
         return chapters.map { chapter ->
             MediaItem.Builder()

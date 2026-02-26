@@ -260,8 +260,7 @@ class AudiobookRepository(
                 }
                 
             } catch (e: Exception) {
-                // Skip files that can't be processed
-                e.printStackTrace()
+                Log.e("AudiobookRepository", "Skipping unprocessable file during scan", e)
             }
         }
         }
@@ -635,7 +634,7 @@ class AudiobookRepository(
             
             Uri.fromFile(coverFile).toString()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AudiobookRepository", "Failed to save cover art for bookId=$bookId", e)
             ""
         }
     }
@@ -834,7 +833,7 @@ class AudiobookRepository(
                             }
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("AudiobookRepository", "Skipping unprocessable SAF file during scan", e)
                     }
                 }
             }

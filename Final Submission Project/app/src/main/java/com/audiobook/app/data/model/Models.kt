@@ -1,5 +1,8 @@
 package com.audiobook.app.data.model
 
+import android.net.Uri
+import java.io.File
+
 data class Audiobook(
     val id: String,
     val title: String,
@@ -14,7 +17,17 @@ data class Audiobook(
     val contentUri: String? = null, // Content URI for MediaStore access
     val description: String? = null, // Book synopsis/description
     val narrator: String? = null // Narrator name (if available)
-)
+) {
+    /**
+     * Resolve the best available URI for this audiobook (content URI or file URI).
+     * Returns null if neither contentUri nor filePath is available.
+     */
+    fun resolveUri(): Uri? = when {
+        !contentUri.isNullOrBlank() -> Uri.parse(contentUri)
+        !filePath.isNullOrBlank() -> Uri.fromFile(File(filePath))
+        else -> null
+    }
+}
 
 data class Chapter(
     val id: Int = 0, // Chapter ID (auto-generated in database)

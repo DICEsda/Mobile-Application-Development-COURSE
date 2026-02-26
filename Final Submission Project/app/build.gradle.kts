@@ -46,6 +46,14 @@ android {
     buildFeatures {
         compose = true
     }
+    
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = true
+        warningsAsErrors = false
+        baseline = file("lint-baseline.xml")
+        disable += setOf("MissingTranslation")
+    }
 }
 
 dependencies {

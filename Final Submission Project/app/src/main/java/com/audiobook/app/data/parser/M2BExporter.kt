@@ -190,11 +190,7 @@ class M2BExporter(private val context: Context) {
     private suspend fun extractCoverArtBase64(audiobook: Audiobook): String? = withContext(Dispatchers.IO) {
         try {
             // Try to get cover art from the M4B file
-            val uri = when {
-                !audiobook.contentUri.isNullOrBlank() -> Uri.parse(audiobook.contentUri)
-                !audiobook.filePath.isNullOrBlank() -> Uri.fromFile(File(audiobook.filePath))
-                else -> return@withContext null
-            }
+            val uri = audiobook.resolveUri() ?: return@withContext null
             
             val parser = ChapterParser(context)
             val metadata = parser.parseM4bFile(uri)

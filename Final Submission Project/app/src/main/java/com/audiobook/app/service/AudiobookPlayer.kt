@@ -241,11 +241,7 @@ class AudiobookPlayer(private val context: Context) {
      * Load and play an audiobook.
      */
     fun playAudiobook(audiobook: Audiobook) {
-        val uri = when {
-            !audiobook.contentUri.isNullOrBlank() -> Uri.parse(audiobook.contentUri)
-            !audiobook.filePath.isNullOrBlank() -> Uri.fromFile(File(audiobook.filePath))
-            else -> return
-        }
+        val uri = audiobook.resolveUri() ?: return
         
         val mediaItem = MediaItem.Builder()
             .setMediaId(audiobook.id)

@@ -22,7 +22,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,6 +45,7 @@ fun PlayerScreen(
     onProfileClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val container = context.appContainer
     
     val viewModel: PlayerViewModel = viewModel(
@@ -68,6 +71,12 @@ fun PlayerScreen(
     val playbackSpeed by viewModel.playbackSpeed.collectAsState()
     val chapters by viewModel.chapters.collectAsState()
     val sleepTimerMinutes by viewModel.sleepTimerMinutes.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val chapterProgress by viewModel.chapterProgress.collectAsState()
+    val chapterTimeFormatted by viewModel.chapterTimeFormatted.collectAsState()
+    val chapterDurationFormatted by viewModel.chapterDurationFormatted.collectAsState()
+    val currentChapterTitle by viewModel.currentChapterTitle.collectAsState()
+    val hasChaptersLoaded = chapters.isNotEmpty()
     
     // Handle null book - show loading or empty state
     val book = currentBook
@@ -134,6 +143,47 @@ fun PlayerScreen(
             ) {
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                // Error banner
+                if (error != null) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = error ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = { viewModel.clearError() },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                
                 // Album art with glow
                 Box(
                     modifier = Modifier.weight(1f),
@@ -182,17 +232,31 @@ fun PlayerScreen(
                     )
                 }
                 
-                // Interactive progress slider
+                // Interactive progress slider (chapter-relative when chapters exist)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 20.dp)
                 ) {
-                    // Custom seekable progress bar
+                    // Show current chapter title when available
+                    if (currentChapterTitle != null) {
+                        Text(
+                            text = currentChapterTitle ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = AccentOrange,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+                    
+                    // Custom seekable progress bar — chapter-relative when chapters exist
                     SeekableProgressBar(
-                        progress = progress,
+                        progress = if (hasChaptersLoaded) chapterProgress else progress,
                         onSeek = { newProgress ->
-                            viewModel.seekToProgress(newProgress)
+                            if (hasChaptersLoaded) {
+                                viewModel.seekToChapterProgress(newProgress)
+                            } else {
+                                viewModel.seekToProgress(newProgress)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -202,12 +266,12 @@ fun PlayerScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = currentTimeFormatted,
+                            text = if (hasChaptersLoaded) chapterTimeFormatted else currentTimeFormatted,
                             style = MaterialTheme.typography.labelSmall,
                             color = TextTertiary
                         )
                         Text(
-                            text = durationFormatted,
+                            text = if (hasChaptersLoaded) chapterDurationFormatted else durationFormatted,
                             style = MaterialTheme.typography.labelSmall,
                             color = TextTertiary
                         )
@@ -301,7 +365,7 @@ fun PlayerScreen(
                             )
                             if (sleepTimerMinutes != null) {
                                 Text(
-                                    text = "${sleepTimerMinutes}m",
+                                    text = if (sleepTimerMinutes == -1) "Ch" else "${sleepTimerMinutes}m",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = AccentOrange
                                 )
@@ -310,13 +374,15 @@ fun PlayerScreen(
                     }
                     
                     // Skip back 15s
-                    Box(
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.skipBackward()
+                        },
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
                             .background(Surface2)
-                            .clickable { viewModel.skipBackward() },
-                        contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -341,30 +407,35 @@ fun PlayerScreen(
                     // Play/Pause - animated
                     PlayPauseButton(
                         isPlaying = isPlaying,
-                        onClick = { viewModel.togglePlayPause() }
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.togglePlayPause()
+                        }
                     )
                     
                     Spacer(modifier = Modifier.width(16.dp))
                     
-                    // Skip forward 30s
-                    Box(
+                    // Skip forward 30s (mirrored Replay icon to match skip back)
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.skipForward()
+                        },
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
                             .background(Surface2)
-                            .clickable { viewModel.skipForward() },
-                        contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Refresh,
+                                imageVector = Icons.Outlined.Replay,
                                 contentDescription = "Skip forward 30 seconds",
                                 tint = TextPrimary,
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .graphicsLayer(scaleX = -1f) // Flip horizontally for forward direction
+                                    .graphicsLayer(scaleX = -1f) // Mirror to point forward
                             )
                             Text(
                                 text = "30",
@@ -457,8 +528,8 @@ fun PlayerScreen(
                 SleepTimerSheet(
                     currentTimer = sleepTimerMinutes,
                     options = sleepTimerOptions,
-                    onTimerSelected = {
-                        viewModel.setSleepTimer(if (it > 0) it else null)
+                    onTimerSelected = { minutes ->
+                        viewModel.setSleepTimer(if (minutes == 0) null else minutes)
                         showSleepTimer = false
                     },
                     onDismiss = { showSleepTimer = false }
@@ -601,26 +672,14 @@ private fun ChapterItem(
     chapter: Chapter,
     onClick: () -> Unit
 ) {
-    // Pulsing animation for playing indicator
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseHeight1 by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(500),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse1"
-    )
-    val pulseHeight2 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(500, delayMillis = 200),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse2"
-    )
+    val playingGradient = remember {
+        Brush.horizontalGradient(
+            colors = listOf(
+                AccentOrange.copy(alpha = 0.1f),
+                Color.Transparent
+            )
+        )
+    }
     
     Box(
         modifier = Modifier
@@ -629,14 +688,7 @@ private fun ChapterItem(
             .background(if (chapter.isPlaying) Surface2 else Surface3)
             .then(
                 if (chapter.isPlaying) {
-                    Modifier.background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                AccentOrange.copy(alpha = 0.1f),
-                                Color.Transparent
-                            )
-                        )
-                    )
+                    Modifier.background(brush = playingGradient)
                 } else Modifier
             )
             .clickable(onClick = onClick)
@@ -690,8 +742,28 @@ private fun ChapterItem(
                     )
                 }
                 
-                // Playing indicator
+                // Playing indicator — animations only run when chapter is playing
                 if (chapter.isPlaying) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                    val pulseHeight1 by infiniteTransition.animateFloat(
+                        initialValue = 0.6f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(500),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "pulse1"
+                    )
+                    val pulseHeight2 by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 0.6f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(500, delayMillis = 200),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "pulse2"
+                    )
+                    
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.Bottom,

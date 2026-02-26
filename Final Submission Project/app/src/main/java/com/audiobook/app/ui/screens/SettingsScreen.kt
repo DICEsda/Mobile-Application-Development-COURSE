@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsState
+import kotlinx.coroutines.flow.map
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,16 +41,12 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val preferencesRepository = context.appContainer.preferencesRepository
     
-    var darkMode by remember { mutableStateOf(true) }
-    var notifications by remember { mutableStateOf(true) }
-    var autoDownload by remember { mutableStateOf(false) }
-    var currentFolderPath by remember { mutableStateOf("Default (Audiobooks)") }
-    
-    LaunchedEffect(Unit) {
-        preferencesRepository.audiobookFolderPath.collect { path ->
-            currentFolderPath = path?.takeIf { it.isNotBlank() } ?: "Default (Audiobooks)"
-        }
-    }
+    val darkMode by preferencesRepository.darkMode.collectAsState(initial = true)
+    val notifications by preferencesRepository.notificationsEnabled.collectAsState(initial = true)
+    val autoDownload by preferencesRepository.autoDownload.collectAsState(initial = false)
+    val currentFolderPath by preferencesRepository.audiobookFolderPath
+        .map { it?.takeIf { p -> p.isNotBlank() } ?: "Default (Audiobooks)" }
+        .collectAsState(initial = "Default (Audiobooks)")
     
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -61,7 +59,7 @@ fun SettingsScreen(
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
             } catch (e: Exception) {
                 // Some URIs may not support persistent permissions, continue anyway
-                e.printStackTrace()
+                android.util.Log.w("SettingsScreen", "Could not take persistable URI permission", e)
             }
             scope.launch {
                 preferencesRepository.setAudiobookFolderPath(it.toString())
@@ -152,7 +150,7 @@ fun SettingsScreen(
                         SettingItemData(
                             icon = Icons.Outlined.Download,
                             label = "Auto-Download",
-                            type = SettingType.Toggle(autoDownload) { autoDownload = it }
+                            type = SettingType.Toggle(autoDownload) { scope.launch { preferencesRepository.setAutoDownload(it) } }
                         )
                     )
                 )
@@ -166,7 +164,7 @@ fun SettingsScreen(
                         SettingItemData(
                             icon = Icons.Outlined.DarkMode,
                             label = "Dark Mode",
-                            type = SettingType.Toggle(darkMode) { darkMode = it }
+                            type = SettingType.Toggle(darkMode) { scope.launch { preferencesRepository.setDarkMode(it) } }
                         )
                     )
                 )
@@ -180,7 +178,7 @@ fun SettingsScreen(
                         SettingItemData(
                             icon = Icons.Outlined.Notifications,
                             label = "Push Notifications",
-                            type = SettingType.Toggle(notifications) { notifications = it }
+                            type = SettingType.Toggle(notifications) { scope.launch { preferencesRepository.setNotificationsEnabled(it) } }
                         )
                     )
                 )

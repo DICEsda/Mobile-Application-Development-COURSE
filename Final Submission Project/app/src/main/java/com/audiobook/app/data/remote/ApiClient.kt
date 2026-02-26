@@ -2,6 +2,7 @@ package com.audiobook.app.data.remote
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import android.util.Log
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -86,6 +87,7 @@ class BookMetadataRepository(
             val response = api.searchByTitle(title, limit = 1)
             response.docs.firstOrNull()
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to search OpenLibrary by title: $title", e)
             null
         }
     }
@@ -103,6 +105,7 @@ class BookMetadataRepository(
             val response = api.searchBooks(query, limit = 1)
             response.docs.firstOrNull()
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to search OpenLibrary by title+author: $title / $author", e)
             null
         }
     }
@@ -135,6 +138,7 @@ class BookMetadataRepository(
         return try {
             api.getWorkDetails(workKey)
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to get work details for key: $workKey", e)
             null
         }
     }
@@ -150,7 +154,12 @@ class BookMetadataRepository(
         return try {
             api.searchBooks(query, limit).docs
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to search books: $query", e)
             emptyList()
         }
+    }
+    
+    companion object {
+        private const val TAG = "BookMetadataRepo"
     }
 }
