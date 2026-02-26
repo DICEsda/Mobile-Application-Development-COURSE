@@ -254,7 +254,7 @@ class PlayerViewModel(
                 } catch (e: Exception) {
                     _error.value = "Failed to play audiobook: ${e.localizedMessage ?: "Unknown error"}"
                 }
-            } ?: run {
+            } else {
                 _error.value = "Audiobook not found"
             }
             // If book not found, currentBook remains null and UI should handle this gracefully
@@ -418,6 +418,20 @@ class PlayerViewModel(
                 isPlaying = isPlaying,
                 progress = chapterProgress
             )
+        }
+    }
+    
+    /**
+     * Rename a chapter title. Persists the change to the database.
+     */
+    fun renameChapter(chapterNumber: Int, newTitle: String) {
+        val updated = _chapters.value.map { ch ->
+            if (ch.number == chapterNumber) ch.copy(title = newTitle) else ch
+        }
+        _chapters.value = updated
+        val bookId = _currentBook.value?.id ?: return
+        viewModelScope.launch {
+            audiobookRepository.updateChapters(bookId, updated)
         }
     }
     

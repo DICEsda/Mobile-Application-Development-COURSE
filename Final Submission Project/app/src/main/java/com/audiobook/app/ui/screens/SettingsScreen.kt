@@ -17,7 +17,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsState
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.map
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +52,9 @@ fun SettingsScreen(
     // Get playing state from audio player
     val isPlaying by context.appContainer.audiobookPlayer.isPlaying.collectAsState()
     
+    // Auth state — only show Sign Out when logged in
+    val isSignedIn = context.appContainer.authRepository.isSignedIn
+    
     // Notification permission state
     val hasNotificationPermission = rememberNotificationPermissionState()
     
@@ -61,8 +64,6 @@ fun SettingsScreen(
     )
     
     // Persisted preferences
-    val darkMode by preferencesRepository.darkMode.collectAsState(initial = true)
-    val autoDownload by preferencesRepository.autoDownload.collectAsState(initial = false)
     val currentFolderPath by preferencesRepository.audiobookFolderPath
         .map { it?.takeIf { p -> p.isNotBlank() } ?: "Default (Audiobooks)" }
         .collectAsState(initial = "Default (Audiobooks)")
@@ -250,16 +251,6 @@ fun SettingsScreen(
                             type = SettingType.Action,
                             onClick = { folderPickerLauncher.launch(null) },
                             showValue = currentFolderPath
-                        ),
-                        SettingItemData(
-                            icon = Icons.Outlined.DarkMode,
-                            label = "Dark Mode",
-                            type = SettingType.Toggle(value = darkMode, onValueChange = { scope.launch { preferencesRepository.setDarkMode(it) } })
-                        ),
-                        SettingItemData(
-                            icon = Icons.Outlined.Download,
-                            label = "Auto Download Covers",
-                            type = SettingType.Toggle(value = autoDownload, onValueChange = { scope.launch { preferencesRepository.setAutoDownload(it) } })
                         )
                     )
                 )
@@ -272,24 +263,26 @@ fun SettingsScreen(
                 )
             }
             
-            // Account Section
-            item {
-                SettingsSection(
-                    title = "Account",
-                    items = listOf(
-                        SettingItemData(
-                            icon = Icons.Outlined.Logout,
-                            label = "Sign Out",
-                            type = SettingType.Action,
-                            isDanger = true,
-                            onClick = {
-                                scope.launch {
-                                    context.appContainer.authRepository.signOut()
+            // Account Section — only visible when signed in
+            if (isSignedIn) {
+                item {
+                    SettingsSection(
+                        title = "Account",
+                        items = listOf(
+                            SettingItemData(
+                                icon = Icons.Outlined.Logout,
+                                label = "Sign Out",
+                                type = SettingType.Action,
+                                isDanger = true,
+                                onClick = {
+                                    scope.launch {
+                                        context.appContainer.authRepository.signOut()
+                                    }
                                 }
-                            }
+                            )
                         )
                     )
-                )
+                }
             }
         }
     }

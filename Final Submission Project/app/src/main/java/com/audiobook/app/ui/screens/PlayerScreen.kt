@@ -475,11 +475,14 @@ fun PlayerScreen(
                     )
                 }
             ) {
-                ChaptersSheet(
+            ChaptersSheet(
                     chapters = viewModel.getChaptersWithPlayingState(),
                     onChapterClick = { chapter ->
                         viewModel.seekToChapter(chapter)
                         showChapters = false
+                    },
+                    onRenameChapter = { chapterNumber, newTitle ->
+                        viewModel.renameChapter(chapterNumber, newTitle)
                     },
                     onDismiss = { showChapters = false }
                 )
@@ -629,8 +632,24 @@ private fun PlayPauseButton(
 private fun ChaptersSheet(
     chapters: List<Chapter>,
     onChapterClick: (Chapter) -> Unit,
+    onRenameChapter: (chapterNumber: Int, newTitle: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // State for the rename dialog
+    var editingChapter by remember { mutableStateOf<Chapter?>(null) }
+    
+    // Rename dialog
+    editingChapter?.let { chapter ->
+        RenameChapterDialog(
+            currentTitle = chapter.title,
+            onDismiss = { editingChapter = null },
+            onConfirm = { newTitle ->
+                onRenameChapter(chapter.number, newTitle)
+                editingChapter = null
+            }
+        )
+    }
+    
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -665,7 +684,8 @@ private fun ChaptersSheet(
             items(chapters) { chapter ->
                 ChapterItem(
                     chapter = chapter,
-                    onClick = { onChapterClick(chapter) }
+                    onClick = { onChapterClick(chapter) },
+                    onEditClick = { editingChapter = chapter }
                 )
             }
         }
@@ -677,7 +697,8 @@ private fun ChaptersSheet(
 @Composable
 private fun ChapterItem(
     chapter: Chapter,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
     val playingGradient = remember {
         Brush.horizontalGradient(
@@ -749,6 +770,19 @@ private fun ChapterItem(
                     )
                 }
                 
+                // Edit chapter title button
+                IconButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Edit chapter title",
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                
                 // Playing indicator — animations only run when chapter is playing
                 if (chapter.isPlaying) {
                     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -808,6 +842,62 @@ private fun ChapterItem(
             }
         }
     }
+}
+
+/**
+ * Dialog for renaming a chapter title.
+ */
+@Composable
+private fun RenameChapterDialog(
+    currentTitle: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(currentTitle) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Edit Chapter Title",
+                color = TextPrimary
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text("Chapter title") },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentOrange,
+                    focusedLabelColor = AccentOrange,
+                    cursorColor = AccentOrange,
+                    unfocusedBorderColor = Surface4,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val trimmed = text.trim()
+                    if (trimmed.isNotEmpty()) onConfirm(trimmed)
+                },
+                enabled = text.trim().isNotEmpty() && text.trim() != currentTitle
+            ) {
+                Text("Save", color = if (text.trim().isNotEmpty() && text.trim() != currentTitle) AccentOrange else TextTertiary)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = TextSecondary)
+            }
+        },
+        containerColor = Surface2
+    )
 }
 
 @Composable

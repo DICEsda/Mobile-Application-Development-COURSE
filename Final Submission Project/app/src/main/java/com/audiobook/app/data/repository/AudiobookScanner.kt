@@ -17,6 +17,7 @@ import com.audiobook.app.data.parser.ChapterParser
 import com.audiobook.app.data.remote.BookMetadataRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -357,7 +358,7 @@ class AudiobookScanner(
         try {
             val mediaItem = androidx.media3.common.MediaItem.fromUri(uri)
             val trackGroupsFuture = androidx.media3.exoplayer.MetadataRetriever.retrieveMetadata(context, mediaItem)
-            val trackGroups = kotlinx.coroutines.guava.await(trackGroupsFuture)
+            val trackGroups = trackGroupsFuture.await()
             var foundDescription: String? = null
 
             for (i in 0 until trackGroups.length) {
