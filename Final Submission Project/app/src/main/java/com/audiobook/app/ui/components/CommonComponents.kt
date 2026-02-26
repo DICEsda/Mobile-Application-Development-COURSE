@@ -82,7 +82,7 @@ private fun NavBarItem(
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.95f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 1500f),
         label = "scale"
     )
     
@@ -92,7 +92,7 @@ private fun NavBarItem(
         initialValue = 1f,
         targetValue = 0.5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
+            animation = tween(800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseAlpha"
@@ -145,7 +145,7 @@ private fun NavBarItem(
     
     LaunchedEffect(pressed) {
         if (pressed) {
-            kotlinx.coroutines.delay(100)
+            kotlinx.coroutines.delay(60)
             pressed = false
         }
     }
@@ -249,7 +249,7 @@ fun ToggleSwitch(
 ) {
     val thumbOffset by animateDpAsState(
         targetValue = if (checked) 24.dp else 4.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 1500f),
         label = "thumbOffset"
     )
     

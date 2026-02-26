@@ -597,7 +597,7 @@ private fun PlayPauseButton(
 ) {
     val scale by animateFloatAsState(
         targetValue = if (isPlaying) 1f else 1.05f,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 1500f),
         label = "scale"
     )
     
@@ -615,7 +615,7 @@ private fun PlayPauseButton(
     ) {
         Crossfade(
             targetState = isPlaying,
-            animationSpec = tween(150),
+            animationSpec = tween(80),
             label = "playPause"
         ) { playing ->
             Icon(
@@ -790,7 +790,7 @@ private fun ChapterItem(
                         initialValue = 0.6f,
                         targetValue = 1f,
                         animationSpec = infiniteRepeatable(
-                            animation = tween(500),
+                            animation = tween(300),
                             repeatMode = RepeatMode.Reverse
                         ),
                         label = "pulse1"
@@ -799,7 +799,7 @@ private fun ChapterItem(
                         initialValue = 1f,
                         targetValue = 0.6f,
                         animationSpec = infiniteRepeatable(
-                            animation = tween(500, delayMillis = 200),
+                            animation = tween(300, delayMillis = 120),
                             repeatMode = RepeatMode.Reverse
                         ),
                         label = "pulse2"

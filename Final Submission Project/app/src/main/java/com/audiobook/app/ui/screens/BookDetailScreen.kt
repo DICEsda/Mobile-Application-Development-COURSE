@@ -1,6 +1,7 @@
 package com.audiobook.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -413,8 +414,8 @@ private fun ChapterItem(
         // Current indicator
         AnimatedVisibility(
             visible = isCurrentChapter,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = fadeIn(animationSpec = tween(100)),
+            exit = fadeOut(animationSpec = tween(100))
         ) {
             Box(
                 modifier = Modifier

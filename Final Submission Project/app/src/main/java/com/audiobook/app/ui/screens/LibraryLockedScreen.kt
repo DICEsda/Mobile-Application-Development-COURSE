@@ -29,7 +29,7 @@ fun LibraryLockedScreen(
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 1500f),
         label = "scale"
     )
     
@@ -39,7 +39,7 @@ fun LibraryLockedScreen(
         initialValue = 0.3f,
         targetValue = 0.6f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
+            animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "glowAlpha"
@@ -204,7 +204,7 @@ fun LibraryLockedScreen(
     
     LaunchedEffect(isPressed) {
         if (isPressed) {
-            kotlinx.coroutines.delay(150)
+            kotlinx.coroutines.delay(80)
             isPressed = false
         }
     }

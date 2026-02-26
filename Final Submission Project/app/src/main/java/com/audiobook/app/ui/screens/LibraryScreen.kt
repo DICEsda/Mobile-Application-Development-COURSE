@@ -886,8 +886,8 @@ private fun AudiobookGridItem(
                 
                 AnimatedVisibility(
                     visible = book.progress > 0f,
-                    enter = fadeIn(animationSpec = tween(300)) + expandHorizontally(animationSpec = tween(300)),
-                    exit = fadeOut(animationSpec = tween(300)) + shrinkHorizontally(animationSpec = tween(300))
+                    enter = fadeIn(animationSpec = tween(150)) + expandHorizontally(animationSpec = tween(150)),
+                    exit = fadeOut(animationSpec = tween(120)) + shrinkHorizontally(animationSpec = tween(120))
                 ) {
                     Text(
                         text = "${(book.progress * 100).toInt()}%",
@@ -901,8 +901,8 @@ private fun AudiobookGridItem(
             // Progress timeline bar
             AnimatedVisibility(
                 visible = book.progress > 0f,
-                enter = fadeIn(animationSpec = tween(400)) + expandVertically(animationSpec = tween(400)),
-                exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+                enter = fadeIn(animationSpec = tween(200)) + expandVertically(animationSpec = tween(200)),
+                exit = fadeOut(animationSpec = tween(150)) + shrinkVertically(animationSpec = tween(150))
             ) {
                 Column {
                     Spacer(modifier = Modifier.height(6.dp))
@@ -916,7 +916,7 @@ private fun AudiobookGridItem(
                         // Animated progress fill
                         val animatedProgress by animateFloatAsState(
                             targetValue = book.progress,
-                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                            animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
                             label = "progressAnimation"
                         )
                         
