@@ -3,6 +3,7 @@ package com.audiobook.app.service
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -36,6 +37,7 @@ import java.util.concurrent.TimeUnit
 class AudiobookPlayer(private val context: Context) {
     
     private var controllerFuture: ListenableFuture<MediaController>? = null
+    @Volatile
     private var mediaController: MediaController? = null
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -82,15 +84,20 @@ class AudiobookPlayer(private val context: Context) {
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         controllerFuture?.addListener(
             {
-                mediaController = controllerFuture?.get()
-                mediaController?.addListener(PlayerListener())
-                _isConnected.value = true
-                
-                // Initial state sync
-                syncPlaybackState()
-                startPositionUpdates()
+                try {
+                    mediaController = controllerFuture?.get()
+                    mediaController?.addListener(PlayerListener())
+                    _isConnected.value = true
+                    
+                    // Initial state sync
+                    syncPlaybackState()
+                    startPositionUpdates()
+                } catch (e: Exception) {
+                    Log.e("AudiobookPlayer", "Failed to connect to MediaController", e)
+                    _isConnected.value = false
+                }
             },
-            MoreExecutors.directExecutor()
+            context.mainExecutor
         )
     }
     
@@ -100,6 +107,7 @@ class AudiobookPlayer(private val context: Context) {
      */
     fun disconnect() {
         positionUpdateJob?.cancel()
+        scope.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         controllerFuture = null
         mediaController = null
@@ -290,11 +298,16 @@ class AudiobookPlayer(private val context: Context) {
     fun resumeFromPosition(audiobook: Audiobook, positionMs: Long) {
         playAudiobook(audiobook)
         mediaController?.let { controller ->
-            // Wait for media to be prepared, then seek
-            scope.launch {
-                delay(500) // Brief delay for media preparation
-                controller.seekTo(positionMs)
+            // Use player state listener to seek when ready instead of hardcoded delay
+            val listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) {
+                        controller.seekTo(positionMs)
+                        controller.removeListener(this)
+                    }
+                }
             }
+            controller.addListener(listener)
         }
     }
     

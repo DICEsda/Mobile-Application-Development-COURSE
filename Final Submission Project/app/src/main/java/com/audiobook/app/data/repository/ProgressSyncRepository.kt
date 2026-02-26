@@ -145,13 +145,17 @@ class ProgressSyncRepository(
                 )
             }
             
-            // Update local database with cloud data
+            // Update local database with cloud data using timestamp comparison
             progressDao?.let { dao ->
                 progressList.forEach { cloudProgress ->
                     val localProgress = dao.getProgress(cloudProgress.bookId)
                     
-                    // Only update if cloud is newer (or local doesn't exist)
-                    if (localProgress == null || localProgress.isSyncedToCloud) {
+                    // Only update if local doesn't exist, or if cloud data represents
+                    // more progress (further position = more recent listening)
+                    val shouldUpdate = localProgress == null ||
+                        (localProgress.isSyncedToCloud && cloudProgress.positionMs > localProgress.currentPositionMs)
+                    
+                    if (shouldUpdate) {
                         dao.insertProgress(
                             ProgressEntity(
                                 bookId = cloudProgress.bookId,

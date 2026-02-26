@@ -49,9 +49,9 @@ class AudiobookRepository(
     companion object {
         /**
          * The folder name where users should place their M4B audiobook files.
-         * Located in the external storage: /storage/emulated/0/Audiobook tests/
+         * Located in the external storage: /storage/emulated/0/Audiobooks/
          */
-        const val AUDIOBOOKS_FOLDER_NAME = "Audiobook tests"
+        const val AUDIOBOOKS_FOLDER_NAME = "Audiobooks"
     }
     
     private val _audiobooks = MutableStateFlow<List<Audiobook>>(emptyList())
@@ -197,21 +197,22 @@ class AudiobookRepository(
                     durationMs = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
                         ?.toLongOrNull() ?: 0L
                     
-                    // Extract and save cover art
+                    // Extract and save cover art with downsampling
                     val coverBytes = retriever.embeddedPicture
                     if (coverBytes != null) {
-                        val bitmap = android.graphics.BitmapFactory.decodeByteArray(coverBytes, 0, coverBytes.size)
+                        val bitmap = decodeSampledBitmap(coverBytes, 512)
                         if (bitmap != null) {
                             coverUrl = saveCoverArt(file.absolutePath.hashCode().toString(), bitmap)
+                            bitmap.recycle()
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    Log.e("AudiobookRepository", "Error extracting metadata from ${file.name}", e)
                 } finally {
                     try {
                         retriever.release()
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("AudiobookRepository", "Error releasing retriever", e)
                     }
                 }
                 
@@ -648,7 +649,7 @@ class AudiobookRepository(
         try {
             val mediaItem = androidx.media3.common.MediaItem.fromUri(uri)
             val trackGroupsFuture = androidx.media3.exoplayer.MetadataRetriever.retrieveMetadata(context, mediaItem)
-            val trackGroups = trackGroupsFuture.get() // Blocking call, but we're on IO dispatcher
+            val trackGroups = kotlinx.coroutines.guava.await(trackGroupsFuture)
             
             var foundDescription: String? = null
             
@@ -762,21 +763,22 @@ class AudiobookRepository(
                                 android.util.Log.d("AudiobookRepo", "Genre: ${retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_GENRE)}")
                                 android.util.Log.d("AudiobookRepo", "Writer: ${retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_WRITER)}")
                                 
-                                // Extract and save cover art
+                                // Extract and save cover art with downsampling
                                 val coverBytes = retriever.embeddedPicture
                                 if (coverBytes != null) {
-                                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(coverBytes, 0, coverBytes.size)
+                                    val bitmap = decodeSampledBitmap(coverBytes, 512)
                                     if (bitmap != null) {
                                         coverUrl = saveCoverArt(file.uri.toString().hashCode().toString(), bitmap)
+                                        bitmap.recycle()
                                     }
                                 }
                             } catch (e: Exception) {
-                                e.printStackTrace()
+                                Log.e("AudiobookRepository", "Error extracting metadata from SAF file", e)
                             } finally {
                                 try {
                                     retriever.release()
                                 } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    Log.e("AudiobookRepository", "Error releasing retriever", e)
                                 }
                             }
                             
@@ -1004,5 +1006,26 @@ class AudiobookRepository(
     fun generateM2BFilename(bookId: String): String? {
         val audiobook = _audiobooks.value.find { it.id == bookId }
         return audiobook?.let { m2bExporter.generateFilename(it) }
+    }
+    
+    /**
+     * Decode a bitmap from byte array with downsampling to avoid OOM.
+     * @param data The raw image bytes
+     * @param maxSize Maximum width or height in pixels
+     */
+    private fun decodeSampledBitmap(data: ByteArray, maxSize: Int): android.graphics.Bitmap? {
+        // First decode bounds only
+        val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, options)
+        
+        // Calculate inSampleSize
+        var sampleSize = 1
+        while (options.outWidth / sampleSize > maxSize || options.outHeight / sampleSize > maxSize) {
+            sampleSize *= 2
+        }
+        
+        // Decode with downsampling
+        val decodeOptions = android.graphics.BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        return android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, decodeOptions)
     }
 }

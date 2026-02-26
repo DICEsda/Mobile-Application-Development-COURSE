@@ -317,7 +317,7 @@ fun LibraryScreen(
                                 if (searchQuery.isEmpty()) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "/storage/emulated/0/Audiobook tests/",
+                                        text = "/storage/emulated/0/Audiobooks/",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = AccentOrange.copy(alpha = 0.7f)
                                     )

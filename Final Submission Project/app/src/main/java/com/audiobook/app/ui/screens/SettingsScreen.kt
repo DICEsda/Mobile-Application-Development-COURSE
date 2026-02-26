@@ -42,11 +42,11 @@ fun SettingsScreen(
     var darkMode by remember { mutableStateOf(true) }
     var notifications by remember { mutableStateOf(true) }
     var autoDownload by remember { mutableStateOf(false) }
-    var currentFolderPath by remember { mutableStateOf("Default (Audiobook tests)") }
+    var currentFolderPath by remember { mutableStateOf("Default (Audiobooks)") }
     
     LaunchedEffect(Unit) {
         preferencesRepository.audiobookFolderPath.collect { path ->
-            currentFolderPath = path?.takeIf { it.isNotBlank() } ?: "Default (Audiobook tests)"
+            currentFolderPath = path?.takeIf { it.isNotBlank() } ?: "Default (Audiobooks)"
         }
     }
     
