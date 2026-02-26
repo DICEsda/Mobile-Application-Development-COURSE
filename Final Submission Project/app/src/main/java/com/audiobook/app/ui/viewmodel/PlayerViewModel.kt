@@ -1,6 +1,5 @@
 package com.audiobook.app.ui.viewmodel
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,6 +10,8 @@ import com.audiobook.app.data.repository.AudiobookRepository
 import com.audiobook.app.data.repository.PreferencesRepository
 import com.audiobook.app.service.AudiobookPlayer
 import com.audiobook.app.service.NotificationTriggerHelper
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -44,6 +45,16 @@ class PlayerViewModel(
     private val _sleepTimerMinutes = MutableStateFlow<Int?>(null)
     val sleepTimerMinutes: StateFlow<Int?> = _sleepTimerMinutes.asStateFlow()
     
+    // Remaining seconds for the active countdown (null = no timer)
+    private val _sleepTimerRemainingSeconds = MutableStateFlow<Long?>(null)
+    val sleepTimerRemainingSeconds: StateFlow<Long?> = _sleepTimerRemainingSeconds.asStateFlow()
+    
+    private var sleepTimerJob: Job? = null
+    
+    // Error state for player failures
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+    
     // Expose player states directly
     val isPlaying: StateFlow<Boolean> = audiobookPlayer.isPlaying
     val progress: StateFlow<Float> = audiobookPlayer.progress
@@ -65,15 +76,64 @@ class PlayerViewModel(
         audiobookPlayer.formatTime((dur - pos).coerceAtLeast(0))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "0:00")
     
+    /**
+     * Chapter-relative progress (0.0 - 1.0) for the current chapter.
+     * Falls back to overall progress if no chapters are available.
+     */
+    val chapterProgress: StateFlow<Float> = combine(currentPosition, _currentChapter) { pos, chapter ->
+        if (chapter != null && chapter.endTimeMs > chapter.startTimeMs) {
+            val chapterDuration = chapter.endTimeMs - chapter.startTimeMs
+            val positionInChapter = pos - chapter.startTimeMs
+            (positionInChapter.toFloat() / chapterDuration.toFloat()).coerceIn(0f, 1f)
+        } else {
+            // Fallback to overall progress
+            progress.value
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0f)
+    
+    /**
+     * Formatted time within the current chapter.
+     */
+    val chapterTimeFormatted: StateFlow<String> = combine(currentPosition, _currentChapter) { pos, chapter ->
+        if (chapter != null) {
+            val posInChapter = (pos - chapter.startTimeMs).coerceAtLeast(0)
+            audiobookPlayer.formatTime(posInChapter)
+        } else {
+            audiobookPlayer.formatTime(pos)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "0:00")
+    
+    /**
+     * Formatted duration of the current chapter.
+     */
+    val chapterDurationFormatted: StateFlow<String> = _currentChapter.map { chapter ->
+        if (chapter != null && chapter.endTimeMs > chapter.startTimeMs) {
+            audiobookPlayer.formatTime(chapter.endTimeMs - chapter.startTimeMs)
+        } else {
+            audiobookPlayer.formatTime(duration.value)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "0:00")
+    
+    /**
+     * Current chapter title for display.
+     */
+    val currentChapterTitle: StateFlow<String?> = _currentChapter.map { it?.title }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    
     init {
-        // Connect to the player when ViewModel is created
         audiobookPlayer.connect()
-        
-        // Update current chapter based on position
+        observeCurrentChapter()
+        restoreLastPlayedBook()
+    }
+    
+    /**
+     * Track which chapter is currently playing based on playback position.
+     */
+    private fun observeCurrentChapter() {
         viewModelScope.launch {
             combine(currentPosition, _chapters) { position, chapters ->
                 chapters.find { chapter ->
-                    position >= chapter.startTimeMs && 
+                    position >= chapter.startTimeMs &&
                     (chapter.endTimeMs == 0L || position < chapter.endTimeMs)
                 }
             }.collect { chapter ->
@@ -132,8 +192,13 @@ class PlayerViewModel(
                 }
             }
         }
-        
-        // Restore last played book
+    }
+    
+    /**
+     * Restore the last played book from preferences so the player screen
+     * shows meaningful state immediately.
+     */
+    private fun restoreLastPlayedBook() {
         viewModelScope.launch {
             preferencesRepository.lastPlayedBookId.collect { bookId ->
                 if (bookId != null && _currentBook.value == null) {
@@ -160,11 +225,7 @@ class PlayerViewModel(
                 // Parse chapters from the M4B file
                 val chapters = if (book.chapters.isEmpty()) {
                     try {
-                        val uri = when {
-                            !book.contentUri.isNullOrBlank() -> Uri.parse(book.contentUri)
-                            !book.filePath.isNullOrBlank() -> Uri.parse(book.filePath)
-                            else -> null
-                        }
+                        val uri = book.resolveUri()
                         if (uri != null) {
                             val metadata = chapterParser.parseM4bFile(uri)
                             // Update repository with parsed chapters if any were found
@@ -176,8 +237,7 @@ class PlayerViewModel(
                             emptyList()
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
-                        // No fallback - return empty list if chapter parsing fails
+                        android.util.Log.e("PlayerViewModel", "Failed to parse chapters", e)
                         emptyList()
                     }
                 } else {
@@ -187,11 +247,25 @@ class PlayerViewModel(
                 _chapters.value = chapters
                 
                 // Start playback automatically
-                audiobookPlayer.playAudiobook(book)
-                audiobookRepository.setCurrentBook(book)
+                try {
+                    audiobookPlayer.playAudiobook(book)
+                    audiobookRepository.setCurrentBook(book)
+                    _error.value = null
+                } catch (e: Exception) {
+                    _error.value = "Failed to play audiobook: ${e.localizedMessage ?: "Unknown error"}"
+                }
+            } ?: run {
+                _error.value = "Audiobook not found"
             }
             // If book not found, currentBook remains null and UI should handle this gracefully
         }
+    }
+    
+    /**
+     * Clear the current error state.
+     */
+    fun clearError() {
+        _error.value = null
     }
     
     /**
@@ -222,6 +296,21 @@ class PlayerViewModel(
      */
     fun seekToProgress(progress: Float) {
         audiobookPlayer.seekToProgress(progress)
+    }
+    
+    /**
+     * Seek to a specific progress within the current chapter (0.0 - 1.0).
+     * Falls back to overall seek if no chapter is active.
+     */
+    fun seekToChapterProgress(chapterProg: Float) {
+        val chapter = _currentChapter.value
+        if (chapter != null && chapter.endTimeMs > chapter.startTimeMs) {
+            val chapterDuration = chapter.endTimeMs - chapter.startTimeMs
+            val targetPosition = chapter.startTimeMs + (chapterDuration * chapterProg).toLong()
+            audiobookPlayer.seekTo(targetPosition)
+        } else {
+            audiobookPlayer.seekToProgress(chapterProg)
+        }
     }
     
     /**
@@ -257,13 +346,53 @@ class PlayerViewModel(
     
     /**
      * Set sleep timer.
+     * @param minutes Positive value = countdown minutes, -1 = end of chapter, null = cancel.
      */
     fun setSleepTimer(minutes: Int?) {
         _sleepTimerMinutes.value = minutes
         viewModelScope.launch {
             preferencesRepository.setSleepTimerMinutes(minutes ?: 0)
         }
-        // TODO: Implement actual sleep timer logic with CountDownTimer
+        
+        // Cancel any existing timer
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimerRemainingSeconds.value = null
+        
+        if (minutes == null) return
+        
+        if (minutes == -1) {
+            // End-of-chapter mode: watch for chapter changes and pause when the current one ends
+            val startChapter = _currentChapter.value
+            sleepTimerJob = viewModelScope.launch {
+                _currentChapter
+                    .filter { it != null && startChapter != null && it.number != startChapter.number }
+                    .first()
+                // Chapter changed — pause playback
+                audiobookPlayer.pause()
+                _sleepTimerMinutes.value = null
+                _sleepTimerRemainingSeconds.value = null
+            }
+        } else if (minutes > 0) {
+            // Timed countdown
+            val totalSeconds = minutes * 60L
+            _sleepTimerRemainingSeconds.value = totalSeconds
+            sleepTimerJob = viewModelScope.launch {
+                var remaining = totalSeconds
+                while (remaining > 0) {
+                    delay(1000L)
+                    remaining--
+                    _sleepTimerRemainingSeconds.value = remaining
+                    // Update the displayed minutes (rounded up)
+                    val displayMinutes = ((remaining + 59) / 60).toInt()
+                    _sleepTimerMinutes.value = displayMinutes
+                }
+                // Timer expired — pause playback
+                audiobookPlayer.pause()
+                _sleepTimerMinutes.value = null
+                _sleepTimerRemainingSeconds.value = null
+            }
+        }
     }
     
     /**

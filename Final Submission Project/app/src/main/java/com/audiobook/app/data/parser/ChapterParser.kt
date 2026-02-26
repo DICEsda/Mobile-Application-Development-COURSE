@@ -69,9 +69,22 @@ class ChapterParser(private val context: Context) {
             val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 ?.toLongOrNull() ?: 0L
             
-            // Extract cover art
+            // Extract cover art with downsampling to avoid OOM
             val coverArt = retriever.embeddedPicture?.let { bytes ->
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                // First decode bounds only to calculate sample size
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+                
+                // Calculate inSampleSize for max 512x512
+                val maxSize = 512
+                var sampleSize = 1
+                while (options.outWidth / sampleSize > maxSize || options.outHeight / sampleSize > maxSize) {
+                    sampleSize *= 2
+                }
+                
+                // Decode with downsampling
+                val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
             }
             
             // Extract chapters using Media3 (more reliable for chapter markers)
@@ -507,11 +520,8 @@ class ChapterParser(private val context: Context) {
      */
     @OptIn(UnstableApi::class)
     fun createMediaItem(audiobook: Audiobook, metadata: AudiobookMetadata): MediaItem {
-        val uri = when {
-            !audiobook.contentUri.isNullOrBlank() -> Uri.parse(audiobook.contentUri)
-            !audiobook.filePath.isNullOrBlank() -> Uri.fromFile(File(audiobook.filePath))
-            else -> throw IllegalArgumentException("No valid URI for audiobook")
-        }
+        val uri = audiobook.resolveUri()
+            ?: throw IllegalArgumentException("No valid URI for audiobook")
         
         return MediaItem.Builder()
             .setMediaId(audiobook.id)
@@ -533,11 +543,7 @@ class ChapterParser(private val context: Context) {
      */
     @OptIn(UnstableApi::class)
     fun createChapterMediaItems(audiobook: Audiobook, chapters: List<Chapter>): List<MediaItem> {
-        val uri = when {
-            !audiobook.contentUri.isNullOrBlank() -> Uri.parse(audiobook.contentUri)
-            !audiobook.filePath.isNullOrBlank() -> Uri.fromFile(File(audiobook.filePath))
-            else -> return emptyList()
-        }
+        val uri = audiobook.resolveUri() ?: return emptyList()
         
         return chapters.map { chapter ->
             MediaItem.Builder()

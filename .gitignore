@@ -17,3 +17,15 @@ node_modules/
 gradle-*-bin.zip
 *.m4b
 opencode.json
+
+# Firebase config (contains API keys)
+google-services.json
+
+# Android sensitive/generated files
+local.properties
+*.jks
+*.keystore
+*.apk
+*.aab
+*.hprof
+captures/

@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,6 +13,20 @@ import com.audiobook.app.ui.screens.*
 import com.audiobook.app.ui.viewmodel.PlayerViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+/**
+ * Navigate to a top-level (bottom nav) destination without accumulating
+ * duplicate entries on the back stack.
+ */
+private fun NavHostController.navigateTopLevel(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
 
 sealed class Screen(val route: String) {
     object LibraryLocked : Screen("library_locked")
@@ -72,7 +87,7 @@ fun AppNavigation(
                     }
                 },
                 onProfileClick = {
-                    navController.navigate(Screen.Profile.route)
+                    navController.navigateTopLevel(Screen.Profile.route)
                 },
                 shouldScrollToCurrentBook = cameFromPlayer
             )
@@ -117,10 +132,10 @@ fun AppNavigation(
             PlayerScreen(
                 bookId = bookId,
                 onLibraryClick = {
-                    navController.navigate(Screen.Library.route)
+                    navController.navigateTopLevel(Screen.Library.route)
                 },
                 onProfileClick = {
-                    navController.navigate(Screen.Profile.route)
+                    navController.navigateTopLevel(Screen.Profile.route)
                 }
             )
         }
@@ -128,9 +143,7 @@ fun AppNavigation(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onLibraryClick = {
-                    navController.navigate(Screen.Library.route) {
-                        popUpTo(Screen.Library.route) { inclusive = true }
-                    }
+                    navController.navigateTopLevel(Screen.Library.route)
                 },
                 onPlayerClick = {
                     // Navigate to player with the currently playing or last played book
@@ -159,9 +172,7 @@ fun AppNavigation(
                     navController.popBackStack()
                 },
                 onLibraryClick = {
-                    navController.navigate(Screen.Library.route) {
-                        popUpTo(Screen.Library.route) { inclusive = true }
-                    }
+                    navController.navigateTopLevel(Screen.Library.route)
                 },
                 onPlayerClick = {
                     // Navigate to player with the currently playing or last played book
@@ -176,7 +187,7 @@ fun AppNavigation(
                     }
                 },
                 onProfileClick = {
-                    navController.navigate(Screen.Profile.route)
+                    navController.navigateTopLevel(Screen.Profile.route)
                 }
             )
         }

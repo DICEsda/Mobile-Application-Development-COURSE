@@ -3,6 +3,7 @@ package com.audiobook.app.data.repository
 import com.audiobook.app.data.local.ProgressDao
 import com.audiobook.app.data.local.ProgressEntity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,19 @@ class ProgressSyncRepository(
     
     private val userId: String?
         get() = auth.currentUser?.uid
+    
+    /**
+     * Parse a Firestore DocumentSnapshot into a PlaybackProgress.
+     */
+    private fun DocumentSnapshot.toPlaybackProgress(bookId: String = this.id): PlaybackProgress =
+        PlaybackProgress(
+            bookId = bookId,
+            bookTitle = getString("bookTitle") ?: "",
+            positionMs = getLong("positionMs") ?: 0L,
+            totalDurationMs = getLong("totalDurationMs") ?: 0L,
+            lastChapter = getLong("lastChapter")?.toInt() ?: 1,
+            playbackSpeed = getDouble("playbackSpeed")?.toFloat() ?: 1.0f
+        )
     
     /**
      * Save playback progress to Firestore.
@@ -108,7 +122,7 @@ class ProgressSyncRepository(
                     dao.markAsSynced(entity.bookId)
                     syncedCount++
                 } catch (e: Exception) {
-                    // Continue with other items if one fails
+                    android.util.Log.e("ProgressSyncRepo", "Failed to sync progress for ${entity.bookId}", e)
                 }
             }
             
@@ -134,24 +148,19 @@ class ProgressSyncRepository(
                 .get()
                 .await()
             
-            val progressList = snapshot.documents.mapNotNull { doc ->
-                PlaybackProgress(
-                    bookId = doc.id,
-                    bookTitle = doc.getString("bookTitle") ?: "",
-                    positionMs = doc.getLong("positionMs") ?: 0L,
-                    totalDurationMs = doc.getLong("totalDurationMs") ?: 0L,
-                    lastChapter = doc.getLong("lastChapter")?.toInt() ?: 1,
-                    playbackSpeed = doc.getDouble("playbackSpeed")?.toFloat() ?: 1.0f
-                )
-            }
+            val progressList = snapshot.documents.map { it.toPlaybackProgress() }
             
-            // Update local database with cloud data
+            // Update local database with cloud data using timestamp comparison
             progressDao?.let { dao ->
                 progressList.forEach { cloudProgress ->
                     val localProgress = dao.getProgress(cloudProgress.bookId)
                     
-                    // Only update if cloud is newer (or local doesn't exist)
-                    if (localProgress == null || localProgress.isSyncedToCloud) {
+                    // Only update if local doesn't exist, or if cloud data represents
+                    // more progress (further position = more recent listening)
+                    val shouldUpdate = localProgress == null ||
+                        (localProgress.isSyncedToCloud && cloudProgress.positionMs > localProgress.currentPositionMs)
+                    
+                    if (shouldUpdate) {
                         dao.insertProgress(
                             ProgressEntity(
                                 bookId = cloudProgress.bookId,
@@ -187,15 +196,7 @@ class ProgressSyncRepository(
                 .await()
             
             if (doc.exists()) {
-                val progress = PlaybackProgress(
-                    bookId = bookId,
-                    bookTitle = doc.getString("bookTitle") ?: "",
-                    positionMs = doc.getLong("positionMs") ?: 0L,
-                    totalDurationMs = doc.getLong("totalDurationMs") ?: 0L,
-                    lastChapter = doc.getLong("lastChapter")?.toInt() ?: 1,
-                    playbackSpeed = doc.getDouble("playbackSpeed")?.toFloat() ?: 1.0f
-                )
-                Result.success(progress)
+                Result.success(doc.toPlaybackProgress(bookId))
             } else {
                 Result.success(null)
             }
@@ -220,16 +221,7 @@ class ProgressSyncRepository(
                 .get()
                 .await()
             
-            val progressList = snapshot.documents.mapNotNull { doc ->
-                PlaybackProgress(
-                    bookId = doc.id,
-                    bookTitle = doc.getString("bookTitle") ?: "",
-                    positionMs = doc.getLong("positionMs") ?: 0L,
-                    totalDurationMs = doc.getLong("totalDurationMs") ?: 0L,
-                    lastChapter = doc.getLong("lastChapter")?.toInt() ?: 1,
-                    playbackSpeed = doc.getDouble("playbackSpeed")?.toFloat() ?: 1.0f
-                )
-            }
+            val progressList = snapshot.documents.map { it.toPlaybackProgress() }
             
             Result.success(progressList)
         } catch (e: Exception) {
@@ -260,16 +252,7 @@ class ProgressSyncRepository(
                 }
                 
                 val progress = snapshot?.let { doc ->
-                    if (doc.exists()) {
-                        PlaybackProgress(
-                            bookId = bookId,
-                            bookTitle = doc.getString("bookTitle") ?: "",
-                            positionMs = doc.getLong("positionMs") ?: 0L,
-                            totalDurationMs = doc.getLong("totalDurationMs") ?: 0L,
-                            lastChapter = doc.getLong("lastChapter")?.toInt() ?: 1,
-                            playbackSpeed = doc.getDouble("playbackSpeed")?.toFloat() ?: 1.0f
-                        )
-                    } else null
+                    if (doc.exists()) doc.toPlaybackProgress(bookId) else null
                 }
                 trySend(progress)
             }

@@ -17,6 +17,8 @@ import com.audiobook.app.navigation.AppNavigation
 import com.audiobook.app.navigation.Screen
 import com.audiobook.app.ui.theme.Background
 import com.audiobook.app.ui.theme.PremiumAudiobookAppTheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : FragmentActivity() {
     
@@ -30,9 +32,15 @@ class MainActivity : FragmentActivity() {
         
         setupBiometricAuth()
         
+        // Check if biometric lock is enabled (default: off)
+        val biometricEnabled = runBlocking {
+            appContainer.preferencesRepository.rememberBiometric.first()
+        }
+        
         setContent {
             PremiumAudiobookAppTheme {
-                var isAuthenticated by remember { mutableStateOf(false) }
+                // If biometrics are disabled, skip the lock screen entirely
+                var isAuthenticated by remember { mutableStateOf(!biometricEnabled) }
                 val navController = rememberNavController()
                 
                 Surface(

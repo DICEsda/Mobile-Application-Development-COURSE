@@ -2,6 +2,14 @@
 <data-extraction-rules>
     <cloud-backup>
         <include domain="sharedpref" path="."/>
+        <include domain="database" path="audiobook_database"/>
+        <include domain="root" path="datastore/"/>
         <exclude domain="sharedpref" path="device.xml"/>
     </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="."/>
+        <include domain="database" path="audiobook_database"/>
+        <include domain="root" path="datastore/"/>
+        <exclude domain="sharedpref" path="device.xml"/>
+    </device-transfer>
 </data-extraction-rules>

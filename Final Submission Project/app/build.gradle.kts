@@ -2,18 +2,19 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.audiobook.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.audiobook.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -27,7 +28,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -43,6 +45,14 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = true
+        warningsAsErrors = false
+        baseline = file("lint-baseline.xml")
+        disable += setOf("MissingTranslation")
     }
 }
 
@@ -76,6 +86,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.guava)
+    
+    // Kotlinx Serialization for JSON
+    implementation(libs.kotlinx.serialization.json)
     
     // Firebase
     implementation(platform(libs.firebase.bom))

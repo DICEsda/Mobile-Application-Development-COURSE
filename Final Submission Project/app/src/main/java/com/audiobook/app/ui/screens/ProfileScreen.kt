@@ -164,12 +164,6 @@ fun ProfileScreen(
                         label = "Account",
                         onClick = { }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SettingsItem(
-                        icon = Icons.Outlined.LibraryBooks,
-                        label = "Library Settings",
-                        onClick = { }
-                    )
                 }
             }
         }

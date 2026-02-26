@@ -121,7 +121,7 @@ fun LibraryScreen(
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
             } catch (e: Exception) {
                 // Some URIs may not support persistent permissions, continue anyway
-                e.printStackTrace()
+                android.util.Log.w("LibraryScreen", "Could not take persistable URI permission", e)
             }
             viewModel.setAudiobookFolder(it.toString())
         }
@@ -374,7 +374,7 @@ fun LibraryScreen(
                                 if (searchQuery.isEmpty()) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "/storage/emulated/0/Audiobook tests/",
+                                        text = "/storage/emulated/0/Audiobooks/",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = AccentOrange.copy(alpha = 0.7f)
                                     )
