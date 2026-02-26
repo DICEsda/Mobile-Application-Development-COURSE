@@ -108,7 +108,7 @@ class PlayerViewModel(
                     try {
                         val uri = when {
                             !book.contentUri.isNullOrBlank() -> Uri.parse(book.contentUri)
-                            !book.filePath.isNullOrBlank() -> Uri.parse(book.filePath)
+                            !book.filePath.isNullOrBlank() -> Uri.fromFile(java.io.File(book.filePath))
                             else -> null
                         }
                         if (uri != null) {

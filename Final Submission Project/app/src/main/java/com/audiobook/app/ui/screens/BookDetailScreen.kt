@@ -267,11 +267,17 @@ private fun ProgressSection(audiobook: Audiobook) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Chapter ${audiobook.currentChapter} of ${audiobook.chapters.size}",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextTertiary
-            )
+            // Only show chapter info if chapters exist
+            if (audiobook.chapters.isNotEmpty()) {
+                Text(
+                    text = "Chapter ${audiobook.currentChapter} of ${audiobook.chapters.size}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary
+                )
+            } else {
+                // Show empty space to maintain layout
+                Spacer(modifier = Modifier.width(1.dp))
+            }
             
             // Calculate remaining time
             val totalMinutes = audiobook.totalDurationMinutes
@@ -318,7 +324,7 @@ private fun BookInfoSection(audiobook: Audiobook) {
             )
             InfoCard(
                 label = "Chapters",
-                value = "${audiobook.chapters.size}",
+                value = if (audiobook.chapters.isNotEmpty()) "${audiobook.chapters.size}" else "N/A",
                 modifier = Modifier.weight(1f)
             )
         }

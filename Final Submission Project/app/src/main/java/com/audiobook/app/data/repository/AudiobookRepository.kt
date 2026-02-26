@@ -222,6 +222,15 @@ class AudiobookRepository(
                 
                 val durationMinutes = (durationMs / 60000).toInt()
                 
+                // Extract chapters from M4B file
+                val chapters = try {
+                    val metadata = chapterParser.parseM4bFile(fileUri)
+                    metadata.chapters
+                } catch (e: Exception) {
+                    Log.e("AudiobookRepository", "Failed to extract chapters from ${file.name}", e)
+                    emptyList()
+                }
+                
                 val audiobook = Audiobook(
                     id = file.absolutePath.hashCode().toString(),
                     title = title,
@@ -231,7 +240,7 @@ class AudiobookRepository(
                     totalDurationMinutes = durationMinutes,
                     progress = 0f,
                     currentChapter = 1,
-                    chapters = emptyList(),
+                    chapters = chapters,
                     filePath = file.absolutePath,
                     contentUri = fileUri.toString()
                 )
@@ -240,6 +249,14 @@ class AudiobookRepository(
                 
                 // Save to database
                 audiobookDao?.insertAudiobook(audiobook.toEntity())
+                
+                // Save chapters to database
+                if (chapters.isNotEmpty()) {
+                    val chapterEntities = chapters.mapIndexed { index, chapter ->
+                        chapter.toEntity(audiobook.id, index + 1)
+                    }
+                    audiobookDao?.insertChapters(chapterEntities)
+                }
                 
             } catch (e: Exception) {
                 // Skip files that can't be processed
@@ -323,6 +340,15 @@ class AudiobookRepository(
                 // Try to fetch cover from OpenLibrary
                 val coverUrl = bookMetadataRepository?.getCoverUrl(title, artist) ?: ""
                 
+                // Extract chapters from M4B file
+                val chapters = try {
+                    val metadata = chapterParser.parseM4bFile(contentUri)
+                    metadata.chapters
+                } catch (e: Exception) {
+                    Log.e("AudiobookRepository", "Failed to extract chapters from MediaStore file", e)
+                    emptyList()
+                }
+                
                 val audiobook = Audiobook(
                     id = id.toString(),
                     title = title,
@@ -332,7 +358,7 @@ class AudiobookRepository(
                     totalDurationMinutes = (durationMs / 60000).toInt(),
                     progress = 0f,
                     currentChapter = 1,
-                    chapters = emptyList(),
+                    chapters = chapters,
                     filePath = path,
                     contentUri = contentUri.toString()
                 )
@@ -341,6 +367,14 @@ class AudiobookRepository(
                 
                 // Save to database
                 audiobookDao?.insertAudiobook(audiobook.toEntity())
+                
+                // Save chapters to database
+                if (chapters.isNotEmpty()) {
+                    val chapterEntities = chapters.mapIndexed { index, chapter ->
+                        chapter.toEntity(audiobook.id, index + 1)
+                    }
+                    audiobookDao?.insertChapters(chapterEntities)
+                }
             }
         }
         
@@ -465,23 +499,53 @@ class AudiobookRepository(
         // Get file name
         val fileName = getFileName(contentResolver, uri) ?: return@withContext null
         
+        // Extract metadata and chapters from the M4B file
+        var title = fileName.removeSuffix(".m4b").removeSuffix(".m4a")
+        var author = "Unknown Author"
+        var coverUrl = ""
+        var durationMs = 0L
+        var chapters = emptyList<Chapter>()
+        
+        try {
+            val metadata = chapterParser.parseM4bFile(uri)
+            title = metadata.title
+            author = metadata.author
+            durationMs = metadata.durationMs
+            chapters = metadata.chapters
+            
+            // Save cover art if available
+            if (metadata.coverArt != null) {
+                coverUrl = saveCoverArt(uri.toString().hashCode().toString(), metadata.coverArt)
+            }
+        } catch (e: Exception) {
+            Log.e("AudiobookRepository", "Failed to extract metadata from URI", e)
+        }
+        
         // Create audiobook entry
         val audiobook = Audiobook(
             id = uri.toString().hashCode().toString(),
-            title = fileName.removeSuffix(".m4b").removeSuffix(".m4a"),
-            author = "Unknown Author",
-            coverUrl = "",
-            duration = "Unknown",
-            totalDurationMinutes = 0,
+            title = title,
+            author = author,
+            coverUrl = coverUrl,
+            duration = formatDuration(durationMs),
+            totalDurationMinutes = (durationMs / 60000).toInt(),
             progress = 0f,
             currentChapter = 1,
-            chapters = emptyList(),
+            chapters = chapters,
             filePath = null,
             contentUri = uri.toString()
         )
         
         // Save to database
         audiobookDao?.insertAudiobook(audiobook.toEntity())
+        
+        // Save chapters to database
+        if (chapters.isNotEmpty()) {
+            val chapterEntities = chapters.mapIndexed { index, chapter ->
+                chapter.toEntity(audiobook.id, index + 1)
+            }
+            audiobookDao?.insertChapters(chapterEntities)
+        }
         
         // Update in-memory list
         _audiobooks.value = _audiobooks.value + audiobook
@@ -731,6 +795,15 @@ class AudiobookRepository(
                             
                             val durationMinutes = (durationMs / 60000).toInt()
                             
+                            // Extract chapters from M4B file
+                            val chapters = try {
+                                val metadata = chapterParser.parseM4bFile(file.uri)
+                                metadata.chapters
+                            } catch (e: Exception) {
+                                Log.e("AudiobookRepository", "Failed to extract chapters from $name", e)
+                                emptyList()
+                            }
+                            
                             // Create new audiobook from SAF file with extracted metadata
                             val audiobook = Audiobook(
                                 id = file.uri.toString().hashCode().toString(),
@@ -741,7 +814,7 @@ class AudiobookRepository(
                                 totalDurationMinutes = durationMinutes,
                                 progress = 0f,
                                 currentChapter = 1,
-                                chapters = emptyList(),
+                                chapters = chapters,
                                 filePath = fileUri,
                                 contentUri = file.uri.toString(),
                                 description = description,
@@ -749,6 +822,14 @@ class AudiobookRepository(
                             )
                             audiobooks.add(audiobook)
                             audiobookDao?.insertAudiobook(audiobook.toEntity())
+                            
+                            // Save chapters to database
+                            if (chapters.isNotEmpty()) {
+                                val chapterEntities = chapters.mapIndexed { index, chapter ->
+                                    chapter.toEntity(audiobook.id, index + 1)
+                                }
+                                audiobookDao?.insertChapters(chapterEntities)
+                            }
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
