@@ -8,8 +8,11 @@ import com.audiobook.app.data.local.AudiobookDatabase
 import com.audiobook.app.data.parser.ChapterParser
 import com.audiobook.app.data.remote.ApiClient
 import com.audiobook.app.data.remote.BookMetadataRepository
+import com.audiobook.app.data.parser.M2BExporter
+import com.audiobook.app.data.parser.M2BImporter
 import com.audiobook.app.data.repository.AudiobookRepository
 import com.audiobook.app.data.repository.AuthRepository
+import com.audiobook.app.data.repository.M2BRepository
 import com.audiobook.app.data.repository.PreferencesRepository
 import com.audiobook.app.data.repository.ProgressSyncRepository
 import com.audiobook.app.service.AudiobookPlayer
@@ -113,6 +116,21 @@ class AppContainer(private val context: Context) {
      */
     val progressSyncRepository: ProgressSyncRepository by lazy {
         ProgressSyncRepository(progressDao)
+    }
+
+    /**
+     * M2B Repository - handles import/export of M2B bookmark files.
+     * Delegates to M2BExporter and M2BImporter for serialization.
+     */
+    val m2bRepository: M2BRepository by lazy {
+        M2BRepository(
+            m2bExporter = M2BExporter(context),
+            m2bImporter = M2BImporter(context),
+            audiobookDao = audiobookDao,
+            progressDao = progressDao,
+            audiobookScanner = audiobookRepository.scanner,
+            audiobookRepository = audiobookRepository
+        )
     }
     
     // ========== Media ==========
