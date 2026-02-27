@@ -74,6 +74,11 @@ fun AppNavigation(
                         launchSingleTop = true
                     }
                 },
+                onBookDetailClick = { bookId ->
+                    navController.navigate(Screen.BookDetail.createRoute(bookId)) {
+                        launchSingleTop = true
+                    }
+                },
                 onPlayerClick = {
                     // Navigate to player with the currently playing or last played book
                     scope.launch {
@@ -95,17 +100,21 @@ fun AppNavigation(
         
         composable(Screen.BookDetail.route) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
-            
+            val container = context.appContainer
+
             // Get audiobook from repository
             var audiobook by remember { mutableStateOf<com.audiobook.app.data.model.Audiobook?>(null) }
-            
+            var savedPosition by remember { mutableStateOf(0L) }
+
             LaunchedEffect(bookId) {
-                audiobook = audiobookRepository.getAudiobook(bookId)
+                audiobook = container.audiobookRepository.getAudiobook(bookId)
+                savedPosition = container.audiobookRepository.getPlaybackPosition(bookId)
             }
-            
+
             audiobook?.let { book ->
                 BookDetailScreen(
                     audiobook = book,
+                    currentPositionMs = savedPosition,
                     onBackClick = {
                         navController.popBackStack()
                     },
@@ -114,14 +123,18 @@ fun AppNavigation(
                         scope.launch {
                             audiobookRepository.setCurrentBook(book)
                         }
-                        navController.navigate(Screen.Player.createRoute(bookId))
+                        navController.navigate(Screen.Player.createRoute(bookId)) {
+                            launchSingleTop = true
+                        }
                     },
                     onChapterClick = { chapter ->
-                        // Navigate to player with chapter info (could pass chapter ID as param)
+                        // Navigate to player with chapter info
                         scope.launch {
                             audiobookRepository.setCurrentBook(book)
                         }
-                        navController.navigate(Screen.Player.createRoute(bookId))
+                        navController.navigate(Screen.Player.createRoute(bookId)) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

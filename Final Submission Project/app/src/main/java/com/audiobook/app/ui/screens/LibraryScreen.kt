@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -45,6 +47,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LibraryScreen(
     onBookClick: (String) -> Unit,
+    onBookDetailClick: (String) -> Unit,
     onPlayerClick: () -> Unit,
     onProfileClick: () -> Unit,
     shouldScrollToCurrentBook: Boolean = false, // Flag to trigger scroll from navigation
@@ -152,6 +155,12 @@ fun LibraryScreen(
                     scope.launch { sheetState.hide() }
                     selectedBook = null
                     onBookClick(bookId)
+                },
+                onDetailClick = {
+                    val bookId = selectedBook!!.id
+                    scope.launch { sheetState.hide() }
+                    selectedBook = null
+                    onBookDetailClick(bookId)
                 },
                 onDismiss = {
                     scope.launch { sheetState.hide() }
@@ -442,6 +451,7 @@ fun LibraryScreen(
 private fun BookDetailPopup(
     audiobook: Audiobook,
     onPlayClick: () -> Unit,
+    onDetailClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -643,6 +653,30 @@ private fun BookDetailPopup(
             Spacer(modifier = Modifier.height(16.dp))
         }
         
+        // View Details button — navigates to full-screen detail page
+        OutlinedButton(
+            onClick = onDetailClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, AccentOrange.copy(alpha = 0.5f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentOrange)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "View Details",
+                style = MaterialTheme.typography.titleSmall,
+                color = AccentOrange
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Play button
         Button(
             onClick = onPlayClick,

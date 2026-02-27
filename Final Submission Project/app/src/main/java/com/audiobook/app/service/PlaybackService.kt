@@ -231,14 +231,16 @@ class PlaybackService : MediaSessionService() {
     }
     
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // Save progress before service is destroyed
+        // Save progress before stopping
         saveCurrentProgress()
         
+        // Always stop playback and service when user swipes app away
         val player = mediaSession?.player
-        if (player == null || !player.playWhenReady || player.mediaItemCount == 0) {
-            // Stop service if nothing is playing
-            stopSelf()
+        player?.let {
+            it.playWhenReady = false
+            it.stop()
         }
+        stopSelf()
     }
     
     override fun onDestroy() {

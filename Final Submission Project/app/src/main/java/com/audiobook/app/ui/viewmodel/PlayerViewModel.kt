@@ -246,9 +246,14 @@ class PlayerViewModel(
                 
                 _chapters.value = chapters
                 
-                // Start playback automatically
+                // Start playback, resuming from saved position if available
                 try {
-                    audiobookPlayer.playAudiobook(book)
+                    val savedPosition = audiobookRepository.getPlaybackPosition(bookId)
+                    if (savedPosition > 0) {
+                        audiobookPlayer.resumeFromPosition(book, savedPosition)
+                    } else {
+                        audiobookPlayer.playAudiobook(book)
+                    }
                     audiobookRepository.setCurrentBook(book)
                     _error.value = null
                 } catch (e: Exception) {

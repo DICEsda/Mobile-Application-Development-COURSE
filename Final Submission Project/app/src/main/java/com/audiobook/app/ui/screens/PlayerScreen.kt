@@ -770,6 +770,17 @@ private fun ChapterItem(
                     )
                 }
                 
+                // Completed indicator
+                if (chapter.progress >= 1f && !chapter.isPlaying) {
+                    Icon(
+                        imageVector = Icons.Outlined.CheckCircle,
+                        contentDescription = "Completed",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                
                 // Edit chapter title button
                 IconButton(
                     onClick = onEditClick,
@@ -835,8 +846,8 @@ private fun ChapterItem(
                 }
             }
             
-            // Progress bar for playing chapter
-            if (chapter.isPlaying) {
+            // Progress bar for chapters with any progress
+            if (chapter.progress > 0f) {
                 Spacer(modifier = Modifier.height(12.dp))
                 ProgressBar(progress = chapter.progress)
             }
