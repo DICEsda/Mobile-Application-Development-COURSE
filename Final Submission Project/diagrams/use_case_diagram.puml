@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+
+actor User
+actor "Android System" as System
+actor "Firebase/OpenLibrary" as Cloud
+
+usecase "Unlock library with biometrics" as UC1
+usecase "Scan/import audiobooks" as UC2
+usecase "Play audiobook in background" as UC3
+usecase "Navigate by chapter and seek" as UC4
+usecase "Resume from saved position" as UC5
+usecase "Sync progress to cloud" as UC6
+usecase "Receive reminder or milestone notifications" as UC7
+usecase "Configure settings and notification preferences" as UC8
+
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+User --> UC8
+
+System --> UC3
+System --> UC7
+
+Cloud --> UC6
+Cloud --> UC7
+@enduml

@@ -1,0 +1,24 @@
+@startuml
+left to right direction
+
+rectangle "UI Flow" {
+  [App Launch] --> [Check Biometric Lock]
+
+  [Check Biometric Lock] --> [Library Screen] : Disabled
+  [Check Biometric Lock] --> [Library Locked Screen] : Enabled
+  [Library Locked Screen] --> [Biometric Prompt]
+  [Biometric Prompt] --> [Library Screen]
+
+  [Library Screen] --> [Book Detail Popup]
+  [Book Detail Popup] --> [Book Detail Screen]
+  [Book Detail Popup] --> [Player Screen]
+  [Book Detail Screen] --> [Player Screen]
+
+  [Player Screen] --> [Chapters Sheet]
+  [Player Screen] --> [Speed Sheet]
+  [Player Screen] --> [Sleep Timer Sheet]
+
+  [Library Screen] --> [Profile Screen]
+  [Profile Screen] --> [Settings Screen]
+}
+@enduml
