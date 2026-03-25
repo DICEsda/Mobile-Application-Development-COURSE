@@ -1,0 +1,252 @@
+@startuml
+!define TITLE Audio Playback Sequence - Smart Audiobook Player
+title TITLE
+
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam maxmessagesize 150
+
+' Actor and participant styling
+skinparam actor {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+
+skinparam participant {
+  BackgroundColor #FFFFFF
+  BorderColor #424242
+}
+
+skinparam participant<<ui>> {
+  BackgroundColor #E3F2FD
+  BorderColor #1976D2
+}
+
+skinparam participant<<viewmodel>> {
+  BackgroundColor #FFF3E0
+  BorderColor #F57C00
+}
+
+skinparam participant<<service>> {
+  BackgroundColor #E8F5E9
+  BorderColor #388E3C
+}
+
+skinparam participant<<data>> {
+  BackgroundColor #F3E5F5
+  BorderColor #7B1FA2
+}
+
+skinparam participant<<storage>> {
+  BackgroundColor #FFE0B2
+  BorderColor #EF6C00
+}
+
+actor User
+participant "PlayerScreen" as PS <<ui>>
+participant "PlayerViewModel" as PVM <<viewmodel>>
+participant "AudiobookPlayer\n(MediaController)" as AP <<service>>
+participant "PlaybackService\n(MediaSessionService)" as PBS <<service>>
+participant "ExoPlayer" as EP <<service>>
+participant "AudiobookRepository" as AR <<data>>
+participant "Room DB" as DB <<data>>
+participant "Device Storage\n(M4B/M4A)" as Storage <<storage>>
+
+== Initialize Playback ==
+
+User -> PS: Tap play button
+activate PS
+
+PS -> PVM: playAudiobook(audiobookId)
+activate PVM
+
+PVM -> AR: getAudiobookById(id)
+activate AR
+AR -> DB: Query audiobook metadata
+activate DB
+note right of DB: Metadata only\n(file path, title, etc.)
+DB --> AR: Audiobook data with file path
+deactivate DB
+AR --> PVM: Audiobook with file path
+deactivate AR
+
+PVM -> AR: getLastPosition(audiobookId)
+activate AR
+AR -> DB: Query saved position
+activate DB
+DB --> AR: Last position (ms)
+deactivate DB
+AR --> PVM: Position data
+deactivate AR
+
+PVM -> AP: prepare(audiobook, position)
+activate AP
+
+AP -> PBS: bind MediaController
+activate PBS
+PBS --> AP: Controller ready
+deactivate PBS
+
+AP -> PBS: setMediaItem(audiobook)
+activate PBS
+note right of PBS: Sets file URI from\ndevice storage path
+PBS -> EP: setMediaItem(fileUri)
+activate EP
+EP -> Storage: Load audio file
+activate Storage
+note right of Storage: M4B/M4A file from\n/storage/emulated/0/Audiobooks/
+Storage --> EP: Audio stream ready
+deactivate Storage
+EP --> PBS: Media prepared
+deactivate EP
+PBS --> AP: Ready
+deactivate PBS
+
+AP -> PBS: seekTo(position)
+activate PBS
+PBS -> EP: seekTo(position)
+activate EP
+EP --> PBS: Seek complete
+deactivate EP
+PBS --> AP: Position updated
+deactivate PBS
+
+AP --> PVM: Playback prepared
+deactivate AP
+
+PVM --> PS: Update UI state (ready)
+deactivate PVM
+
+PS --> User: Show ready state
+deactivate PS
+
+== Start Playback ==
+
+User -> PS: Confirm play
+activate PS
+
+PS -> PVM: play()
+activate PVM
+
+PVM -> AP: play()
+activate AP
+
+AP -> PBS: play()
+activate PBS
+
+PBS -> EP: play()
+activate EP
+EP --> PBS: Playing
+deactivate EP
+
+PBS --> AP: Playback started
+deactivate PBS
+
+AP --> PVM: StateFlow update\n(isPlaying = true)
+deactivate AP
+
+PVM --> PS: UI state update
+deactivate PVM
+
+PS --> User: Show playing UI
+deactivate PS
+
+== Progress Updates (Background Loop) ==
+
+loop Every 500ms while playing
+  EP -> PBS: Position update
+  activate PBS
+  PBS -> AP: onPlaybackStateChanged()
+  activate AP
+  AP -> PVM: StateFlow emit\n(position, duration)
+  activate PVM
+  
+  PVM -> AR: saveProgress(id, position)
+  activate AR
+  AR -> DB: UPDATE progress
+  activate DB
+  DB --> AR: Saved
+  deactivate DB
+  AR --> PVM: Success
+  deactivate AR
+  
+  PVM -> PS: Update progress UI
+  activate PS
+  PS --> User: Show progress bar
+  deactivate PS
+  deactivate PVM
+  deactivate AP
+  deactivate PBS
+end
+
+== Chapter Navigation ==
+
+User -> PS: Tap next chapter
+activate PS
+
+PS -> PVM: seekToNextChapter()
+activate PVM
+
+PVM -> PVM: Calculate chapter position
+PVM -> AP: seekTo(chapterStartMs)
+activate AP
+
+AP -> PBS: seekTo(position)
+activate PBS
+PBS -> EP: seekTo(position)
+activate EP
+EP --> PBS: Seek complete
+deactivate EP
+PBS --> AP: New position
+deactivate PBS
+
+AP --> PVM: Position updated
+deactivate AP
+
+PVM --> PS: Chapter changed
+deactivate PVM
+
+PS --> User: Show new chapter
+deactivate PS
+
+== Pause and Save ==
+
+User -> PS: Tap pause
+activate PS
+
+PS -> PVM: pause()
+activate PVM
+
+PVM -> AP: pause()
+activate AP
+
+AP -> PBS: pause()
+activate PBS
+PBS -> EP: pause()
+activate EP
+EP --> PBS: Paused
+deactivate EP
+PBS --> AP: Playback paused
+deactivate PBS
+
+AP --> PVM: StateFlow update\n(isPlaying = false)
+deactivate AP
+
+PVM -> AR: saveProgress(id, currentPosition)
+activate AR
+AR -> DB: UPDATE progress
+activate DB
+DB --> AR: Saved
+deactivate DB
+AR --> PVM: Success
+deactivate AR
+
+PVM --> PS: UI state update
+deactivate PVM
+
+PS --> User: Show paused UI
+deactivate PS
+
+@enduml

@@ -1,7 +1,7 @@
 # Project Synopsis
 
 ## Project Title
-**Lunar Audio: Smart Audiobook Player**
+**Smart Audiobook Player**
 
 **Group Members:**  
 - John Nguyen (202209849)  
@@ -11,7 +11,7 @@
 ---
 
 ## App Vision
-Lunar Audio is a premium mobile audiobook app focused on smooth long-form listening, especially for M4B/M4A files.  
+Smart Audiobook Player is a premium mobile audiobook app focused on smooth long-form listening, especially for M4B/M4A files.
 
 The app solves common audiobook pain points: poor chapter support, weak resume accuracy, and inconsistent playback across sessions/devices. It offers secure user accounts, cloud-synced progress, chapter-aware playback, and a minimalist high-contrast interface designed for distraction-free listening.
 

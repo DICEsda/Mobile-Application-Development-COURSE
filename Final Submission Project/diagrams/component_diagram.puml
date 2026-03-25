@@ -1,66 +1,126 @@
 @startuml
+!define TITLE Component Architecture - Smart Audiobook Player
+title TITLE
+
 left to right direction
 skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
 
-package "Compose UI Layer" {
-  [LibraryScreen]
-  [PlayerScreen]
-  [BookDetailScreen]
-  [ProfileScreen]
-  [SettingsScreen]
+' Color scheme
+skinparam package {
+  BackgroundColor<<ui>> #E3F2FD
+  BorderColor<<ui>> #1976D2
+  BackgroundColor<<viewmodel>> #FFF3E0
+  BorderColor<<viewmodel>> #F57C00
+  BackgroundColor<<data>> #F3E5F5
+  BorderColor<<data>> #7B1FA2
+  BackgroundColor<<playback>> #E8F5E9
+  BorderColor<<playback>> #388E3C
 }
 
-package "ViewModel Layer" {
-  [LibraryViewModel]
-  [PlayerViewModel]
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #424242
+  ArrowColor #616161
+  FontSize 11
 }
 
-package "Data and Domain Layer" {
-  [AudiobookRepository]
-  [AudiobookScanner]
-  [PreferencesRepository]
-  [ProgressSyncRepository]
-  [NotificationRepository]
-  [ChapterParser]
+skinparam database {
+  BackgroundColor #FFF9C4
+  BorderColor #F57F17
 }
 
-package "Playback Layer" {
-  [AudiobookPlayer\nMediaController facade]
-  [PlaybackService\nMediaSessionService]
-  [ExoPlayer]
+skinparam cloud {
+  BackgroundColor #E0F7FA
+  BorderColor #0097A7
 }
 
-database "Room DB" as RoomDB
+skinparam storage {
+  BackgroundColor #FFE0B2
+  BorderColor #EF6C00
+}
+
+package "Compose UI Layer" <<ui>> {
+  component [LibraryScreen] as LS
+  component [PlayerScreen] as PS
+  component [BookDetailScreen] as BDS
+  component [ProfileScreen] as PFS
+  component [SettingsScreen] as SS
+}
+
+package "ViewModel Layer" <<viewmodel>> {
+  component [LibraryViewModel] as LVM
+  component [PlayerViewModel] as PVM
+}
+
+package "Data & Domain Layer" <<data>> {
+  component [AudiobookRepository] as AR
+  component [AudiobookScanner] as AS
+  component [PreferencesRepository] as PR
+  component [ProgressSyncRepository] as PSR
+  component [NotificationRepository] as NR
+  component [ChapterParser] as CP
+}
+
+package "Playback Layer" <<playback>> {
+  component [AudiobookPlayer\n<MediaController>] as AP
+  component [PlaybackService\n<MediaSessionService>] as PBS
+  component [ExoPlayer] as EP
+}
+
+storage "Device Storage\n(M4B/M4A Files)" as DeviceStorage
+database "Room\nDatabase" as RoomDB
 database "DataStore" as DataStore
-cloud "Firebase Auth" as FirebaseAuth
+cloud "Firebase\nAuth" as FirebaseAuth
 cloud "Firestore" as Firestore
-cloud "Firebase Cloud Messaging" as FCM
-cloud "OpenLibrary API" as OpenLibraryAPI
+cloud "FCM" as FCM
+cloud "OpenLibrary\nAPI" as OpenLibraryAPI
 
-[LibraryScreen] --> [LibraryViewModel]
-[PlayerScreen] --> [PlayerViewModel]
-[BookDetailScreen] --> [PlayerViewModel]
-[SettingsScreen] --> [NotificationRepository]
+' UI to ViewModel
+LS -down-> LVM
+PS -down-> PVM
+BDS -down-> PVM
+SS -down-> NR
 
-[LibraryViewModel] --> [AudiobookRepository]
-[PlayerViewModel] --> [AudiobookRepository]
-[PlayerViewModel] --> [AudiobookPlayer\nMediaController facade]
-[PlayerViewModel] --> [ChapterParser]
+' ViewModel to Data
+LVM -down-> AR
+PVM -down-> AR
+PVM -down-> AP
+PVM -down-> CP
 
-[AudiobookRepository] --> [AudiobookScanner]
-[AudiobookRepository] --> RoomDB
-[AudiobookRepository] --> [PreferencesRepository]
-[AudiobookRepository] --> [ChapterParser]
-[AudiobookRepository] --> OpenLibraryAPI
+' Repository connections
+AR -down-> AS
+AR -down-> RoomDB
+AR -down-> PR
+AR -down-> CP
+AR -down-> OpenLibraryAPI
 
-[PreferencesRepository] --> DataStore
-[ProgressSyncRepository] --> Firestore
-[ProgressSyncRepository] --> FirebaseAuth
-[NotificationRepository] --> Firestore
-[NotificationRepository] --> FirebaseAuth
-[NotificationRepository] --> FCM
+' Scanner reads from device storage
+AS -down-> DeviceStorage : Scans M4B/M4A files
 
-[AudiobookPlayer\nMediaController facade] --> [PlaybackService\nMediaSessionService]
-[PlaybackService\nMediaSessionService] --> [ExoPlayer]
-[PlaybackService\nMediaSessionService] --> [PreferencesRepository]
+' ExoPlayer reads audio from device storage
+EP -down-> DeviceStorage : Streams audio
+
+PR -down-> DataStore
+PSR -down-> Firestore
+PSR -down-> FirebaseAuth
+NR -down-> Firestore
+NR -down-> FirebaseAuth
+NR -down-> FCM
+
+' Playback chain
+AP -down-> PBS
+PBS -down-> EP
+PBS -down-> PR
+
+legend right
+  |= Layer |= Responsibility |
+  | UI | User interface screens |
+  | ViewModel | State management |
+  | Data | Business logic & persistence |
+  | Playback | Media playback services |
+  | Storage | Device filesystem (audio files) |
+endlegend
+
 @enduml

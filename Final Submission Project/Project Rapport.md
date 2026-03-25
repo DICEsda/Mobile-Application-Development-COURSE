@@ -1,6 +1,6 @@
 # Project Report
 
-## Lunar Audio: Smart Audiobook Player
+## Smart Audiobook Player
 
 **Course:** Mobile Application Development  
 **Report Type:** Final Project Rapport  
@@ -30,7 +30,7 @@
 
 ## App Vision
 
-Lunar Audio is a premium mobile audiobook app focused on smooth long-form listening, especially for M4B/M4A files.
+Smart Audiobook Player is a premium mobile audiobook app focused on smooth long-form listening, especially for M4B/M4A files.
 
 The app solves common audiobook pain points: poor chapter support, weak resume accuracy, and inconsistent playback across sessions/devices. It offers secure user accounts, cloud-synced progress, chapter-aware playback, and a minimalist high-contrast interface designed for distraction-free listening.
 
@@ -42,7 +42,9 @@ This section maps the requested project requirements to the implemented Android 
 
 ### Implemented feature overview
 
-Lunar Audio is implemented as a Kotlin Android app using Jetpack Compose and an MVVM-style architecture. Core playback is built on Media3, where a `MediaSessionService` (`PlaybackService`) handles background playback and system integrations. UI and service are connected through a `MediaController` wrapper (`AudiobookPlayer`) and Compose state flows.
+Smart Audiobook Player is implemented as a Kotlin Android app using Jetpack Compose and an MVVM-style architecture. Core playback is built on Media3, where a `MediaSessionService` (`PlaybackService`) handles background playback and system integrations. UI and service are connected through a `MediaController` wrapper (`AudiobookPlayer`) and Compose state flows.
+
+**Important:** All audiobook files (M4B/M4A format) are stored locally on the device's filesystem. The app scans device storage directories (e.g., `/storage/emulated/0/Audiobooks/`) to discover available audiobooks. Room database stores only metadata (title, author, file path, cover art path) and playback progress—not the audio files themselves. ExoPlayer streams audio directly from local file URIs during playback.
 
 The app includes the requested core screens:
 - Library screen with search, continue listening, folder selection, and grid browsing.
@@ -312,12 +314,130 @@ Cloud --> UC7
 @enduml
 ```
 
+### Sequence diagram - Audio playback flow
+
+The following sequence diagram illustrates the complete audio playback lifecycle, from user interaction through the UI layer, down to the Media3 playback service, and back up with state updates.
+
+```puml
+@startuml
+!define TITLE Audio Playback Sequence - Smart Audiobook Player
+title TITLE
+
+actor User
+participant "PlayerScreen" as PS
+participant "PlayerViewModel" as PVM
+participant "AudiobookPlayer\n(MediaController)" as AP
+participant "PlaybackService\n(MediaSessionService)" as PBS
+participant "ExoPlayer" as EP
+participant "AudiobookRepository" as AR
+participant "Room DB" as DB
+
+== Initialize Playback ==
+
+User -> PS: Tap play button
+PS -> PVM: playAudiobook(audiobookId)
+PVM -> AR: getAudiobookById(id)
+AR -> DB: Query audiobook
+DB --> AR: Audiobook data
+AR --> PVM: Audiobook with metadata
+
+PVM -> AR: getLastPosition(audiobookId)
+AR -> DB: Query saved position
+DB --> AR: Last position (ms)
+AR --> PVM: Position data
+
+PVM -> AP: prepare(audiobook, position)
+AP -> PBS: bind MediaController
+PBS --> AP: Controller ready
+AP -> PBS: setMediaItem(audiobook)
+PBS -> EP: setMediaItem()
+EP --> PBS: Media prepared
+PBS --> AP: Ready
+
+AP -> PBS: seekTo(position)
+PBS -> EP: seekTo(position)
+EP --> PBS: Seek complete
+PBS --> AP: Position updated
+AP --> PVM: Playback prepared
+PVM --> PS: Update UI state (ready)
+PS --> User: Show ready state
+
+== Start Playback ==
+
+User -> PS: Confirm play
+PS -> PVM: play()
+PVM -> AP: play()
+AP -> PBS: play()
+PBS -> EP: play()
+EP --> PBS: Playing
+PBS --> AP: Playback started
+AP --> PVM: StateFlow update\n(isPlaying = true)
+PVM --> PS: UI state update
+PS --> User: Show playing UI
+
+== Progress Updates (Background Loop) ==
+
+loop Every 500ms while playing
+  EP -> PBS: Position update
+  PBS -> AP: onPlaybackStateChanged()
+  AP -> PVM: StateFlow emit\n(position, duration)
+  PVM -> AR: saveProgress(id, position)
+  AR -> DB: UPDATE progress
+  DB --> AR: Saved
+  AR --> PVM: Success
+  PVM -> PS: Update progress UI
+  PS --> User: Show progress bar
+end
+
+== Chapter Navigation ==
+
+User -> PS: Tap next chapter
+PS -> PVM: seekToNextChapter()
+PVM -> PVM: Calculate chapter position
+PVM -> AP: seekTo(chapterStartMs)
+AP -> PBS: seekTo(position)
+PBS -> EP: seekTo(position)
+EP --> PBS: Seek complete
+PBS --> AP: New position
+AP --> PVM: Position updated
+PVM --> PS: Chapter changed
+PS --> User: Show new chapter
+
+== Pause and Save ==
+
+User -> PS: Tap pause
+PS -> PVM: pause()
+PVM -> AP: pause()
+AP -> PBS: pause()
+PBS -> EP: pause()
+EP --> PBS: Paused
+PBS --> AP: Playback paused
+AP --> PVM: StateFlow update\n(isPlaying = false)
+PVM -> AR: saveProgress(id, currentPosition)
+AR -> DB: UPDATE progress
+DB --> AR: Saved
+AR --> PVM: Success
+PVM --> PS: UI state update
+PS --> User: Show paused UI
+
+@enduml
+```
+
+This sequence captures the key interactions:
+1. **Initialization:** Loading audiobook data and last saved position from Room DB
+2. **Media preparation:** Setting up the Media3 ExoPlayer through the service layer
+3. **Playback control:** Starting/pausing playback with bidirectional state updates
+4. **Progress tracking:** Continuous position saves every 500ms during playback
+5. **Chapter navigation:** Calculating and seeking to chapter boundaries
+6. **State management:** StateFlow-based reactive updates from service to UI
+
 ### Exported diagram outputs (PUML)
 
 After running the export script, include these rendered outputs in the final PDF package:
 - `diagrams/exports/ui_flow.png`
 - `diagrams/exports/component_diagram.png`
 - `diagrams/exports/use_case_diagram.png`
+- `diagrams/exports/sequence_playback.png`
 
 Rendered outputs:
 
@@ -327,11 +447,13 @@ Rendered outputs:
 
 ![Use Case Diagram Export](./diagrams/exports/use_case_diagram.png)
 
+![Sequence Diagram - Audio Playback](./diagrams/exports/sequence_playback.png)
+
 ---
 
 ## Conclusion
 
-Lunar Audio delivers a strong end-to-end Android audiobook experience that aligns with the course goals and the original synopsis direction. The project demonstrates practical use of modern Android architecture and media APIs, especially through the Media3 `MediaSessionService` approach, chapter-aware playback logic, and a Compose-first UI implementation.
+Smart Audiobook Player delivers a strong end-to-end Android audiobook experience that aligns with the course goals and the original synopsis direction.The project demonstrates practical use of modern Android architecture and media APIs, especially through the Media3 `MediaSessionService` approach, chapter-aware playback logic, and a Compose-first UI implementation.
 
 From a technical perspective, the main success is the playback architecture: decoupling UI from media service, preserving playback continuity, and supporting audiobook-specific controls such as 15s/30s skip, chapter navigation, speed control, and sleep timer. The implementation also shows good persistence strategy through Room and DataStore, enabling reliable local resume behavior.
 
