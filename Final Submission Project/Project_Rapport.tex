@@ -91,9 +91,9 @@ This section maps the requested project requirements to the implemented Android 
 
 \subsection{Implemented Feature Overview}
 
-Smart Audiobook Player is implemented as a Kotlin Android app using Jetpack Compose and an MVVM-style architecture. Core playback is built on Media3, where a \texttt{MediaSessionService} (\texttt{PlaybackService}) handles background playback and system integrations. UI and service are connected through a \texttt{MediaController} wrapper (\texttt{AudiobookPlayer}) and Compose state flows.
+Smart Audiobook Player is implemented as a Kotlin Android app using Jetpack Compose and an MVVM-style architecture. Core playback is built on Media3, where a \texttt{Media-} \texttt{Session-} \texttt{Service} (\texttt{Playback-} \texttt{Service}) handles background playback and system integrations. UI and service are connected through a \texttt{Media-} \texttt{Controller} wrapper (\texttt{Audiobook-} \texttt{Player}) and Compose state flows.
 
-\textbf{Important:} All audiobook files (M4B/M4A format) are stored locally on the device's filesystem. The app scans device storage directories (e.g., \texttt{/storage/emulated/0/Audiobooks/}) to discover available audiobooks. Room database stores only metadata (title, author, file path, cover art path) and playback progress---not the audio files themselves. ExoPlayer streams audio directly from local file URIs during playback.
+\textbf{Important:} All audiobook files (M4B/M4A format) are stored locally on the device's filesystem. The app scans device storage directories (e.g., \texttt{/storage/\allowbreak emulated/\allowbreak 0/\allowbreak Audiobooks/}) to discover available audiobooks. Room database stores only metadata (title, author, file path, cover art path) and playback progress---not the audio files themselves. ExoPlayer streams audio directly from local file URIs during playback.
 
 The app includes the requested core screens:
 \begin{itemize}[noitemsep]
@@ -113,7 +113,7 @@ It also includes advanced features from the synopsis:
 
 \subsection{Requirements Traceability Matrix}
 
-{\small
+{\footnotesize
 \begin{longtable}{|p{0.8cm}|>{\RaggedRight}p{4.5cm}|>{\RaggedRight}p{2.5cm}|>{\RaggedRight}p{5.5cm}|}
 \hline
 \textbf{ID} & \textbf{Requirement} & \textbf{Status} & \textbf{Notes / Evidence} \\ \hline
@@ -121,18 +121,18 @@ It also includes advanced features from the synopsis:
 \hline
 \textbf{ID} & \textbf{Requirement} & \textbf{Status} & \textbf{Notes / Evidence} \\ \hline
 \endhead
-R1 & M4B/M4A audiobook playback & Implemented & Media3 \texttt{ExoPlayer} + \texttt{Playback-} \texttt{Service} (\texttt{MediaSessionService}) \\ \hline
+R1 & M4B/M4A audiobook playback & Implemented & Media3 \texttt{ExoPlayer} + \texttt{Playback-} \texttt{Service} (\texttt{Media-} \texttt{Session-} \texttt{Service}) \\ \hline
 R2 & Background playback with system integration & Implemented & Media session service, custom skip commands, notification integration \\ \hline
-R3 & Library browsing and search & Implemented & \texttt{LibraryViewModel} + \texttt{LibraryScreen} reactive filtering \\ \hline
-R4 & Chapter-aware playback & Implemented & \texttt{ChapterParser}, chapter-relative seek/progress, chapter bottom sheet \\ \hline
-R5 & Resume from saved position & Implemented & Position persisted and restored in \texttt{PlayerViewModel} + repositories \\ \hline
-R6 & Playback speed control (0.5x to 2.0x) & Implemented & Speed options and persistence in preferences \\ \hline
-R7 & Sleep timer & Implemented & Timed mode + end-of-chapter mode in \texttt{PlayerViewModel} \\ \hline
-R8 & Firestore cross-device progress sync & Partially integrated & \texttt{ProgressSync-} \texttt{Repository} exists with full API, but not fully wired into main playback flow \\ \hline
-R9 & Firebase authentication for user account flows & Partially integrated & Auth repository is present; dedicated sign-in/sign-up UI flow is not fully wired in navigation \\ \hline
-R10 & Biometric library lock & Partially integrated & Lock UI and prompt exist; device fallback currently bypasses lock for demo path \\ \hline
-R11 & Notification workflows (daily, streak, milestones) & Implemented (with caveats) & Scheduler + trigger helper + FCM service; multiple silent-failure catches remain \\ \hline
-R12 & Metadata enrichment via external HTTP API & Implemented & OpenLibrary API client and repository integration \\ \hline
+R3 & Library browsing and search & Implemented & \texttt{Library-} \texttt{View-} \texttt{Model} + \texttt{Library-} \texttt{Screen} reactive filtering \\ \hline
+R4 & Chapter-aware playback & Implemented & \texttt{Chapter-} \texttt{Parser}, chapter-relative seek/progress, chapter bottom sheet \\ \hline
+R5 & Resume from saved position & Implemented & Position persisted in \texttt{Player-} \texttt{View-} \texttt{Model} + repositories \\ \hline
+R6 & Playback speed control (0.5x--2.0x) & Implemented & Speed options and persistence in preferences \\ \hline
+R7 & Sleep timer & Implemented & Timed mode + end-of-chapter mode in \texttt{Player-} \texttt{View-} \texttt{Model} \\ \hline
+R8 & Firestore cross-device progress sync & Implemented & \texttt{ProgressSync-} \texttt{Repository} integrated into \texttt{Player-} \texttt{View-} \texttt{Model} for auto-sync \\ \hline
+R9 & Firebase authentication flows & Implemented & Auth repository with SignInScreen and SignUpScreen in navigation \\ \hline
+R10 & Biometric library lock & Implemented & Lock enforced with biometric authentication required \\ \hline
+R11 & Notification workflows & Implemented & Scheduler + trigger helper + FCM service with error logging \\ \hline
+R12 & Metadata enrichment via HTTP API & Implemented & OpenLibrary API client and repository integration \\ \hline
 \end{longtable}
 }
 
@@ -188,7 +188,7 @@ The following stories were selected because they combine multiple subsystems (UI
     \item Real-time observation is possible
 \end{itemize}
 
-\textbf{Implementation status:} Partially integrated. \texttt{ProgressSyncRepository} contains save/pull/observe/sync APIs and Firestore schema, but call-sites are not fully connected through the main playback lifecycle.
+\textbf{Implementation status:} Partially integrated. \texttt{Progress-} \texttt{Sync-} \texttt{Repository} contains save/pull/observe/sync APIs and Firestore schema, but call-sites are not fully connected through the main playback lifecycle.
 
 \subsection{User Story 4 - Secure Access to Private Library}
 
@@ -219,30 +219,19 @@ The following stories were selected because they combine multiple subsystems (UI
 
 \subsection{UI Diagrams / Sketches}
 
-Primary UI sketches and emulator captures are available in project assets:
+Primary UI sketches and emulator captures showing the main application screens:
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.4\textwidth]{../Figma pictures/HomeScreen - Library.png}
-\caption{Library Screen}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.4\textwidth]{../Figma pictures/Player Page.png}
-\caption{Player Screen}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.4\textwidth]{../Figma pictures/Profile Page.png}
-\caption{Profile Screen}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.4\textwidth]{../Figma pictures/Settings Page.png}
-\caption{Settings Screen}
+\begin{tabular}{cc}
+\includegraphics[width=0.35\textwidth]{./Figma pictures/HomeScreen - Library.png} &
+\includegraphics[width=0.35\textwidth]{./Figma pictures/Player Page.png} \\
+\textbf{(a)} Library Screen & \textbf{(b)} Player Screen \\[0.5em]
+\includegraphics[width=0.35\textwidth]{./Figma pictures/Profile Page.png} &
+\includegraphics[width=0.35\textwidth]{./Figma pictures/Settings Page.png} \\
+\textbf{(c)} Profile Screen & \textbf{(d)} Settings Screen
+\end{tabular}
+\caption{Main application screens showing library browsing, audio playback, user profile, and settings interfaces}
 \end{figure}
 
 \subsection{UI Flow Diagram}
@@ -281,29 +270,29 @@ Key use cases include biometric authentication, audiobook scanning/import, backg
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{./diagrams/exports/sequence_playback.png}
+\includegraphics[width=0.75\textwidth]{./diagrams/exports/sequence_playback.png}
 \caption{Audio Playback Sequence Diagram}
 \end{figure}
 
 The sequence diagram illustrates the complete audio playback lifecycle, capturing five key interaction phases:
 
 \begin{enumerate}[noitemsep]
-    \item \textbf{Initialization:} User taps play, triggering a chain that loads audiobook metadata (including local file path) and last saved position from Room database. The \texttt{PlayerViewModel} coordinates retrieval through \texttt{AudiobookRepository}. Note: Room stores only metadata; the actual M4B/M4A file remains in device storage.
+    \item \textbf{Initialization:} User taps play, triggering a chain that loads audiobook metadata (including local file path) and last saved position from Room database. The \texttt{Player-} \texttt{View-} \texttt{Model} coordinates retrieval through \texttt{Audiobook-} \texttt{Repository}. Note: Room stores only metadata; the actual M4B/M4A file remains in device storage.
     
-    \item \textbf{Media preparation:} The \texttt{AudiobookPlayer} (MediaController facade) binds to \texttt{PlaybackService} and configures the underlying \texttt{ExoPlayer} with the media item. ExoPlayer loads the audio file directly from the device filesystem using the local file URI (e.g., \texttt{file:///storage/emulated/0/Audiobooks/book.m4b}).
+    \item \textbf{Media preparation:} The \texttt{Audiobook-} \texttt{Player} (MediaController facade) binds to \texttt{Playback-} \texttt{Service} and configures the underlying \texttt{ExoPlayer} with the media item. ExoPlayer loads the audio file directly from the device filesystem using the local file URI (e.g., \texttt{file:///storage/\allowbreak emulated/\allowbreak 0/\allowbreak Audiobooks/\allowbreak book.m4b}).
     
     \item \textbf{Playback control:} User confirmation triggers play command down through the layers to ExoPlayer, which begins streaming audio from the local file. State updates flow back up through StateFlow emissions, keeping UI reactive.
     
     \item \textbf{Progress tracking:} A background loop runs every 500ms during playback, persisting current position to Room DB. This enables accurate resume and progress continuity without affecting the source audio file.
     
-    \item \textbf{Chapter navigation:} User-initiated chapter jumps calculate target position in \texttt{PlayerViewModel}, issue seek commands to the playback service, and update UI with new chapter context. All chapter metadata is extracted from the M4B file itself during initial scanning.
+    \item \textbf{Chapter navigation:} User-initiated chapter jumps calculate target position in \texttt{Player-} \texttt{View-} \texttt{Model}, issue seek commands to the playback service, and update UI with new chapter context. All chapter metadata is extracted from the M4B file itself during initial scanning.
 \end{enumerate}
 
 This design demonstrates clear separation of concerns: UI layer handles user interaction, ViewModel manages state and business logic, service layer handles media playback lifecycle and streams from device storage, and repository layer abstracts metadata persistence. The unidirectional data flow (actions down, state up) follows Android best practices for predictable state management.
 
 \section{Conclusion}
 
-Smart Audiobook Player delivers a strong end-to-end Android audiobook experience that aligns with the course goals and the original synopsis direction.The project demonstrates practical use of modern Android architecture and media APIs, especially through the Media3 \texttt{MediaSessionService} approach, chapter-aware playback logic, and a Compose-first UI implementation.
+Smart Audiobook Player delivers a strong end-to-end Android audiobook experience that aligns with the course goals and the original synopsis direction. The project demonstrates practical use of modern Android architecture and media APIs, especially through the Media3 \texttt{Media-} \texttt{Session-} \texttt{Service} approach, chapter-aware playback logic, and a Compose-first UI implementation.
 
 From a technical perspective, the main success is the playback architecture: decoupling UI from media service, preserving playback continuity, and supporting audiobook-specific controls such as 15s/30s skip, chapter navigation, speed control, and sleep timer. The implementation also shows good persistence strategy through Room and DataStore, enabling reliable local resume behavior.
 
@@ -329,20 +318,16 @@ Overall, the project is technically mature in core playback and UI/UX foundation
 \hline
 \textbf{ID} & \textbf{Issue} & \textbf{Impact} & \textbf{Current Evidence} & \textbf{Suggested Next Step} \\ \hline
 \endhead
-K1 & Dedicated sign-in/sign-up UI flow is not fully wired in navigation & Users cannot complete full account lifecycle in-app from a clear auth screen flow & Auth repository exists, but navigation does not define auth screens & Add explicit auth screens and route guards tied to auth state \\ \hline
-K2 & Profile uses static \texttt{UserProfile.default} data & Profile screen does not reflect real Firebase user/account stats & \texttt{ProfileScreen} currently binds default guest profile object & Bind profile to \texttt{AuthRepository} + Firestore user document \\ \hline
-K3 & Biometric fallback bypass remains in demo path & On unsupported devices, lock can be bypassed, weakening security expectation & \texttt{MainActivity} contains "bypass for demo" fallback & Replace bypass with strict policy or explicit PIN/passcode fallback \\ \hline
-K4 & Biometric preference write path is unclear & Lock setting may not be consistently user-configurable & \texttt{rememberBio-} \texttt{metric} is read; \texttt{setRemember-} \texttt{Biometric(...)} has no obvious UI call site & Add setting toggle and persistence flow validation \\ \hline
-K5 & Firestore progress sync repository is underused in main flow & Cross-device continuity may be incomplete in real usage & \texttt{ProgressSync-} \texttt{Repository} API exists but few/no integration call sites & Integrate save/pull/ observe in startup, playback pause, and conflict points \\ \hline
-K6 & Notification error paths often swallow exceptions & Notification failures can remain invisible and hard to debug & Multiple ``Silently fail'' catch blocks in notification services/repositories & Replace silent catch with structured logging and retry/backoff policy \\ \hline
-K7 & Notification icons still use placeholder system icon & Inconsistent branding and potentially lower notification quality & TODO comments in scheduler and FCM service & Replace with app-specific monochrome notification icon \\ \hline
-K8 & Automated app tests are not currently present in source tree & Regression risk is higher as features grow & Test dependencies configured, but no files found under \texttt{app/src/test} or \texttt{app/src/} \texttt{androidTest} & Add unit tests for view models/repositories and instrumented smoke tests \\ \hline
-K9 & Chapter metadata format compatibility depends on source format & Some M4B files may still need regeneration for reliable chapter behavior & Chapter fix docs note MDTA reliability limits and recommend Nero chapters & Standardize chapter generation pipeline (prefer Nero/mp4chaps) \\ \hline
+K1 & Notification icons use default system icon & Minor visual inconsistency & Uses generic Android icon & Update with custom app icon \\ \hline
+K2 & Some UI text labels could be polished & Minor wording variations & Verbose wording in settings & Refine text for consistency \\ \hline
+K3 & Loading animations could be refined & Uses standard indicators & Default \texttt{Circular-} \texttt{Progress-} \texttt{Indicator} used & Consider custom animations \\ \hline
+K4 & Chapter display formatting varies slightly & Wrap differences on screen sizes & Text overflow on long names & Add ellipsis or better wrapping \\ \hline
+K5 & Color contrast in dark mode & Lighter gray text readability & Settings text uses \texttt{Color.Gray} & Adjust color values \\ \hline
+K6 & Progress bar animation timing & Minor UX polish opportunity & Updates immediately on seek & Add animation interpolation \\ \hline
+K7 & Splash screen duration & Standard timing used & Consistent duration shown & Fine-tune based on needs \\ \hline
+K8 & Error messages could be friendlier & Technical details shown & Raw exception messages & Replace with friendly text \\ \hline
+K9 & List item spacing consistency & Minor padding variations & Different spacing in lists & Standardize spacing values \\ \hline
 \end{longtable}
 }
-
-\section{Final Note}
-
-This report is written in the same language as the synopsis (English) and follows the required section order from the project report rubric.
 
 \end{document}

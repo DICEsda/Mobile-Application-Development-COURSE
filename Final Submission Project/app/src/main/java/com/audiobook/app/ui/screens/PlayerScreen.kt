@@ -57,7 +57,8 @@ fun PlayerScreen(
             audiobookRepository = container.audiobookRepository,
             preferencesRepository = container.preferencesRepository,
             chapterParser = container.chapterParser,
-            notificationTriggerHelper = container.notificationTriggerHelper
+            notificationTriggerHelper = container.notificationTriggerHelper,
+            progressSyncRepository = container.progressSyncRepository
         )
     )
     

@@ -30,6 +30,8 @@ private fun NavHostController.navigateTopLevel(route: String) {
 
 sealed class Screen(val route: String) {
     object LibraryLocked : Screen("library_locked")
+    object SignIn : Screen("sign_in")
+    object SignUp : Screen("sign_up")
     object Library : Screen("library")
     object BookDetail : Screen("book_detail/{bookId}") {
         fun createRoute(bookId: String) = "book_detail/$bookId"
@@ -58,6 +60,34 @@ fun AppNavigation(
         composable(Screen.LibraryLocked.route) {
             LibraryLockedScreen(
                 onUnlock = onAuthenticate
+            )
+        }
+        
+        composable(Screen.SignIn.route) {
+            SignInScreen(
+                authRepository = container.authRepository,
+                onSignInSuccess = {
+                    navController.navigate(Screen.Library.route) {
+                        popUpTo(Screen.SignIn.route) { inclusive = true }
+                    }
+                },
+                onNavigateToSignUp = {
+                    navController.navigate(Screen.SignUp.route)
+                }
+            )
+        }
+        
+        composable(Screen.SignUp.route) {
+            SignUpScreen(
+                authRepository = container.authRepository,
+                onSignUpSuccess = {
+                    navController.navigate(Screen.Library.route) {
+                        popUpTo(Screen.SignUp.route) { inclusive = true }
+                    }
+                },
+                onNavigateToSignIn = {
+                    navController.popBackStack()
+                }
             )
         }
         

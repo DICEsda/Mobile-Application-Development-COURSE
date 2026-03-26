@@ -8,6 +8,7 @@ import com.audiobook.app.data.model.Chapter
 import com.audiobook.app.data.parser.ChapterParser
 import com.audiobook.app.data.repository.AudiobookRepository
 import com.audiobook.app.data.repository.PreferencesRepository
+import com.audiobook.app.data.repository.ProgressSyncRepository
 import com.audiobook.app.service.AudiobookPlayer
 import com.audiobook.app.service.NotificationTriggerHelper
 import kotlinx.coroutines.Job
@@ -26,7 +27,8 @@ class PlayerViewModel(
     private val audiobookRepository: AudiobookRepository,
     private val preferencesRepository: PreferencesRepository,
     private val chapterParser: ChapterParser,
-    private val notificationTriggerHelper: NotificationTriggerHelper
+    private val notificationTriggerHelper: NotificationTriggerHelper,
+    private val progressSyncRepository: ProgressSyncRepository
 ) : ViewModel() {
     
     // Current audiobook being played
@@ -165,6 +167,25 @@ class PlayerViewModel(
                     currentChapter = chapterNum,
                     positionMs = currentPosition.value
                 )
+                
+                // Sync progress to Firestore for cross-device support
+                _currentBook.value?.let { book ->
+                    viewModelScope.launch {
+                        try {
+                            val playbackProgress = com.audiobook.app.data.repository.PlaybackProgress(
+                                bookId = bookId,
+                                bookTitle = book.title,
+                                positionMs = currentPosition.value,
+                                totalDurationMs = duration.value,
+                                lastChapter = chapterNum,
+                                playbackSpeed = playbackSpeed.value
+                            )
+                            progressSyncRepository.saveProgress(playbackProgress)
+                        } catch (e: Exception) {
+                            android.util.Log.e("PlayerViewModel", "Failed to sync progress to Firestore", e)
+                        }
+                    }
+                }
                 
                 // Trigger book completion notification when reaching 98%+ (close to end)
                 if (progressValue >= 0.98f && _currentBook.value != null) {
@@ -454,7 +475,8 @@ class PlayerViewModel(
         private val audiobookRepository: AudiobookRepository,
         private val preferencesRepository: PreferencesRepository,
         private val chapterParser: ChapterParser,
-        private val notificationTriggerHelper: NotificationTriggerHelper
+        private val notificationTriggerHelper: NotificationTriggerHelper,
+        private val progressSyncRepository: ProgressSyncRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -464,7 +486,8 @@ class PlayerViewModel(
                     audiobookRepository,
                     preferencesRepository,
                     chapterParser,
-                    notificationTriggerHelper
+                    notificationTriggerHelper,
+                    progressSyncRepository
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")

@@ -104,8 +104,13 @@ class MainActivity : FragmentActivity() {
                 biometricPrompt.authenticate(promptInfo)
             }
             else -> {
-                // Biometric not available, bypass for demo
-                onResult(true)
+                // Biometric not available - deny access to maintain security
+                onResult(false)
+                android.widget.Toast.makeText(
+                    this,
+                    "Biometric authentication is required but not available on this device",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
             }
         }
     }

@@ -75,7 +75,8 @@ class NotificationTriggerHelper(
                 
                 notificationRepository.logNotificationSent("milestone")
             } catch (e: Exception) {
-                // Silently fail
+                android.util.Log.e("NotificationTriggerHelper", "Failed to handle book completion", e)
+                // Continue execution - notification failure should not crash app
             }
         }
     }
@@ -96,7 +97,7 @@ class NotificationTriggerHelper(
                 )
             }
         } catch (e: Exception) {
-            // Silently fail
+            android.util.Log.e("NotificationTriggerHelper", "Failed to check books milestone", e)
         }
     }
     
@@ -139,7 +140,7 @@ class NotificationTriggerHelper(
                 // Update streak
                 updateStreak(userId)
             } catch (e: Exception) {
-                // Silently fail
+                android.util.Log.e("NotificationTriggerHelper", "Failed to update listening session", e)
             }
         }
     }
