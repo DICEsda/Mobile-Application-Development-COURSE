@@ -65,7 +65,7 @@ fun AppNavigation(
         
         composable(Screen.SignIn.route) {
             SignInScreen(
-                authRepository = container.authRepository,
+                authRepository = context.appContainer.authRepository,
                 onSignInSuccess = {
                     navController.navigate(Screen.Library.route) {
                         popUpTo(Screen.SignIn.route) { inclusive = true }
@@ -79,7 +79,7 @@ fun AppNavigation(
         
         composable(Screen.SignUp.route) {
             SignUpScreen(
-                authRepository = container.authRepository,
+                authRepository = context.appContainer.authRepository,
                 onSignUpSuccess = {
                     navController.navigate(Screen.Library.route) {
                         popUpTo(Screen.SignUp.route) { inclusive = true }
@@ -123,6 +123,12 @@ fun AppNavigation(
                 },
                 onProfileClick = {
                     navController.navigateTopLevel(Screen.Profile.route)
+                },
+                onSignInClick = {
+                    navController.navigate(Screen.SignIn.route)
+                },
+                onSignUpClick = {
+                    navController.navigate(Screen.SignUp.route)
                 },
                 shouldScrollToCurrentBook = cameFromPlayer
             )
@@ -175,10 +181,15 @@ fun AppNavigation(
             PlayerScreen(
                 bookId = bookId,
                 onLibraryClick = {
-                    navController.navigateTopLevel(Screen.Library.route)
+                    navController.navigate(Screen.Library.route) {
+                        popUpTo(Screen.Library.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
                 },
                 onProfileClick = {
-                    navController.navigateTopLevel(Screen.Profile.route)
+                    navController.navigate(Screen.Profile.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -189,48 +200,15 @@ fun AppNavigation(
                     navController.navigateTopLevel(Screen.Library.route)
                 },
                 onPlayerClick = {
-                    // Navigate to player with the currently playing or last played book
                     scope.launch {
                         val currentBookId = audiobookRepository.currentBook.value?.id
                             ?: context.appContainer.preferencesRepository.lastPlayedBookId.first()
                             ?: audiobookRepository.audiobooks.value.firstOrNull()?.id
-                        
+
                         if (currentBookId != null) {
                             navController.navigate(Screen.Player.createRoute(currentBookId))
                         }
                     }
-                },
-                onSettingsClick = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
-        }
-        
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onBackClick = {
-                    navController.popBackStack()
-                },
-                onLibraryClick = {
-                    navController.navigateTopLevel(Screen.Library.route)
-                },
-                onPlayerClick = {
-                    // Navigate to player with the currently playing or last played book
-                    scope.launch {
-                        val currentBookId = audiobookRepository.currentBook.value?.id
-                            ?: context.appContainer.preferencesRepository.lastPlayedBookId.first()
-                            ?: audiobookRepository.audiobooks.value.firstOrNull()?.id
-                        
-                        if (currentBookId != null) {
-                            navController.navigate(Screen.Player.createRoute(currentBookId))
-                        }
-                    }
-                },
-                onProfileClick = {
-                    navController.navigateTopLevel(Screen.Profile.route)
                 }
             )
         }

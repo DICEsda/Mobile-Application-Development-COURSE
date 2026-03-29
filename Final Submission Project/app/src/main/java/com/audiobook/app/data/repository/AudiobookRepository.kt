@@ -285,6 +285,21 @@ class AudiobookRepository(
     /**
      * Get playback position for a book.
      */
+    suspend fun saveChapterProgress(bookId: String, chapterProgressMap: Map<Int, Float>) = withContext(Dispatchers.IO) {
+        val json = org.json.JSONObject(chapterProgressMap.mapKeys { it.key.toString() }).toString()
+        progressDao?.updateChapterProgress(bookId, json)
+    }
+
+    suspend fun getChapterProgress(bookId: String): Map<Int, Float> = withContext(Dispatchers.IO) {
+        val json = progressDao?.getProgress(bookId)?.chapterProgressJson ?: "{}"
+        try {
+            val obj = org.json.JSONObject(json)
+            obj.keys().asSequence().associate { it.toInt() to obj.getDouble(it).toFloat() }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
     suspend fun getPlaybackPosition(bookId: String): Long = withContext(Dispatchers.IO) {
         progressDao?.getProgress(bookId)?.currentPositionMs ?: 0L
     }

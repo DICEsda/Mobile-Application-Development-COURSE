@@ -53,7 +53,8 @@ class ProgressSyncRepository(
             positionMs = getLong("positionMs") ?: 0L,
             totalDurationMs = getLong("totalDurationMs") ?: 0L,
             lastChapter = getLong("lastChapter")?.toInt() ?: 1,
-            playbackSpeed = getDouble("playbackSpeed")?.toFloat() ?: 1.0f
+            playbackSpeed = getDouble("playbackSpeed")?.toFloat() ?: 1.0f,
+            chapterProgressJson = getString("chapterProgress") ?: "{}"
         )
     
     /**
@@ -64,13 +65,17 @@ class ProgressSyncRepository(
         val uid = userId ?: return Result.failure(Exception("User not signed in"))
         
         return try {
+            // Include per-chapter progress from local DB
+            val chapterProgressJson = progressDao?.getProgress(progress.bookId)?.chapterProgressJson ?: "{}"
+
             val data = mapOf(
                 "positionMs" to progress.positionMs,
                 "totalDurationMs" to progress.totalDurationMs,
                 "lastChapter" to progress.lastChapter,
                 "lastUpdated" to com.google.firebase.Timestamp.now(),
                 "bookTitle" to progress.bookTitle,
-                "playbackSpeed" to progress.playbackSpeed
+                "playbackSpeed" to progress.playbackSpeed,
+                "chapterProgress" to chapterProgressJson
             )
             
             firestore.collection("users")
@@ -168,7 +173,8 @@ class ProgressSyncRepository(
                                 currentChapter = cloudProgress.lastChapter,
                                 progress = cloudProgress.progressPercent,
                                 playbackSpeed = cloudProgress.playbackSpeed,
-                                isSyncedToCloud = true
+                                isSyncedToCloud = true,
+                                chapterProgressJson = cloudProgress.chapterProgressJson
                             )
                         )
                     }
@@ -293,7 +299,8 @@ data class PlaybackProgress(
     val positionMs: Long,
     val totalDurationMs: Long,
     val lastChapter: Int,
-    val playbackSpeed: Float = 1.0f
+    val playbackSpeed: Float = 1.0f,
+    val chapterProgressJson: String = "{}"
 ) {
     /**
      * Progress as a percentage (0.0 - 1.0).

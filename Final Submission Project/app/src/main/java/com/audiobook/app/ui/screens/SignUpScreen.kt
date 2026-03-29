@@ -16,6 +16,7 @@ fun SignUpScreen(
     onSignUpSuccess: () -> Unit,
     onNavigateToSignIn: () -> Unit
 ) {
+    var displayName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -38,6 +39,17 @@ fun SignUpScreen(
         )
         
         OutlinedTextField(
+            value = displayName,
+            onValueChange = { displayName = it },
+            label = { Text("Name") },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
@@ -45,7 +57,7 @@ fun SignUpScreen(
             enabled = !isLoading,
             singleLine = true
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
         
         OutlinedTextField(
@@ -104,10 +116,16 @@ fun SignUpScreen(
                 errorMessage = null
                 scope.launch {
                     val result = authRepository.signUp(email, password)
-                    isLoading = false
                     result.fold(
-                        onSuccess = { onSignUpSuccess() },
-                        onFailure = { e -> 
+                        onSuccess = {
+                            if (displayName.isNotBlank()) {
+                                authRepository.updateDisplayName(displayName.trim())
+                            }
+                            isLoading = false
+                            onSignUpSuccess()
+                        },
+                        onFailure = { e ->
+                            isLoading = false
                             errorMessage = e.message ?: "Sign up failed"
                         }
                     )

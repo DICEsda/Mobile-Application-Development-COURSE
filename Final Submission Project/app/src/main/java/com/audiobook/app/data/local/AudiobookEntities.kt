@@ -74,7 +74,8 @@ data class ProgressEntity(
     val progress: Float = 0f,
     val playbackSpeed: Float = 1.0f,
     val lastUpdated: Long = System.currentTimeMillis(),
-    val isSyncedToCloud: Boolean = false
+    val isSyncedToCloud: Boolean = false,
+    val chapterProgressJson: String = "{}"
 )
 
 /**

@@ -133,6 +133,7 @@ fun PlayerScreen(
                 BottomNavBar(
                     selectedItem = NavItem.Player,
                     onItemSelected = { item ->
+                        android.util.Log.d("PlayerScreen", "BottomNav tapped: $item")
                         when (item) {
                             NavItem.Library -> onLibraryClick()
                             NavItem.Player -> {}
@@ -149,8 +150,23 @@ fun PlayerScreen(
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
+                // Back to library
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    IconButton(onClick = onLibraryClick) {
+                        Icon(
+                            imageVector = Icons.Outlined.KeyboardArrowDown,
+                            contentDescription = "Back to library",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
                 // Error banner
                 if (error != null) {
                     Surface(

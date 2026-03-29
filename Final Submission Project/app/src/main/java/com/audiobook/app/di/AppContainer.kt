@@ -45,7 +45,7 @@ class AppContainer(private val context: Context) {
         name = "audiobook_preferences"
     )
     
-    // ========== Database ==========
+    // Database
     
     /**
      * Room Database instance - manages local storage for audiobooks,
@@ -65,7 +65,7 @@ class AppContainer(private val context: Context) {
      */
     val progressDao by lazy { database.progressDao() }
     
-    // ========== Network ==========
+    // Network
     
     /**
      * OpenLibrary API service for fetching book metadata.
@@ -80,7 +80,7 @@ class AppContainer(private val context: Context) {
         BookMetadataRepository(openLibraryApi)
     }
     
-    // ========== Repositories ==========
+    // Repositories
     
     /**
      * Preferences Repository - manages user settings like playback speed,
@@ -160,7 +160,7 @@ class AppContainer(private val context: Context) {
         NotificationTriggerHelper(context, notificationRepository, notificationScheduler)
     }
     
-    // ========== Media ==========
+    // Media
     
     /**
      * Chapter Parser - extracts metadata and chapters from M4B files.

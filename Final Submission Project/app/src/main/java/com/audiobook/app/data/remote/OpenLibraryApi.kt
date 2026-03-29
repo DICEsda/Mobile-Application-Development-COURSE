@@ -77,9 +77,7 @@ interface OpenLibraryApi {
     ): AuthorDetails
 }
 
-// ============================================================
 // Response Models
-// ============================================================
 
 data class SearchResponse(
     val numFound: Int = 0,

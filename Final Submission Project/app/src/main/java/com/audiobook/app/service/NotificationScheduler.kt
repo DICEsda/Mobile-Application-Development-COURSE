@@ -277,6 +277,7 @@ class NotificationReceiver : BroadcastReceiver() {
      */
     private fun handleMilestone(context: Context, milestoneType: String, message: String) {
         val title = when (milestoneType) {
+            "first_audiobook" -> "Welcome to Audiobooks! 🎉"
             "book_completed" -> "Book Completed! 🎉"
             "hours_milestone" -> "Listening Milestone! 🎧"
             "books_milestone" -> "Books Milestone! 📚"
@@ -313,7 +314,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, channelId)
             .setContentTitle(title)
             .setContentText(body)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // TODO: Replace with app icon
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

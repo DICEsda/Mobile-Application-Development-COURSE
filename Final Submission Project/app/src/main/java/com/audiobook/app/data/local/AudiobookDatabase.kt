@@ -22,7 +22,7 @@ import androidx.room.RoomDatabase
         ChapterEntity::class,
         ProgressEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AudiobookDatabase : RoomDatabase() {
@@ -62,8 +62,6 @@ abstract class AudiobookDatabase : RoomDatabase() {
                 AudiobookDatabase::class.java,
                 DATABASE_NAME
             )
-                // Enable destructive migration for development
-                // In production, you would provide proper migrations
                 .fallbackToDestructiveMigration()
                 .build()
         }

@@ -98,7 +98,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     ))
                     .await()
             } catch (e: Exception) {
-                // Silently fail - token will be updated next time
+                // Non-critical, continue
             }
         }
     }
@@ -149,7 +149,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(body)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // TODO: Replace with app icon
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

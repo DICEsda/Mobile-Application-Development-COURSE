@@ -143,7 +143,7 @@ fun Audiobook.toM2BFile(
         source = M2BSource(
             filePath = filePath,
             contentUri = contentUri,
-            fileHash = null,  // TODO: Calculate hash if needed
+            fileHash = null,
             bookId = id
         )
     )

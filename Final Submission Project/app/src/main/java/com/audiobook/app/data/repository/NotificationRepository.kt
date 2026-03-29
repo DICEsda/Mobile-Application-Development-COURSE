@@ -49,9 +49,7 @@ class NotificationRepository(
         private val KEY_FCM_TOKEN = booleanPreferencesKey("fcm_token_saved")
     }
     
-    // ============================================================
     // Preference Flows
-    // ============================================================
     
     val notificationsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_NOTIFICATIONS_ENABLED] ?: true
@@ -86,9 +84,7 @@ class NotificationRepository(
         )
     }
     
-    // ============================================================
     // Preference Updates
-    // ============================================================
     
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
@@ -134,9 +130,7 @@ class NotificationRepository(
         }
     }
     
-    // ============================================================
     // FCM Token Management
-    // ============================================================
     
     /**
      * Get the current FCM token and save it to Firestore.
@@ -186,7 +180,7 @@ class NotificationRepository(
                     )
                     .await()
             } catch (e: Exception) {
-                // Silently fail
+                // Non-critical, continue
             }
         }
     }
@@ -211,7 +205,7 @@ class NotificationRepository(
                 messaging.subscribeToTopic("milestones").await()
             }
         } catch (e: Exception) {
-            // Silently fail
+            // Non-critical, continue
         }
     }
     
@@ -225,13 +219,11 @@ class NotificationRepository(
             messaging.unsubscribeFromTopic("streaks").await()
             messaging.unsubscribeFromTopic("milestones").await()
         } catch (e: Exception) {
-            // Silently fail
+            // Non-critical, continue
         }
     }
     
-    // ============================================================
     // Notification Statistics
-    // ============================================================
     
     /**
      * Save notification statistics to Firestore.
@@ -251,7 +243,7 @@ class NotificationRepository(
                 )
                 .await()
         } catch (e: Exception) {
-            // Silently fail
+            // Non-critical, continue
         }
     }
     

@@ -50,6 +50,8 @@ fun LibraryScreen(
     onBookDetailClick: (String) -> Unit,
     onPlayerClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onSignInClick: () -> Unit = {},
+    onSignUpClick: () -> Unit = {},
     shouldScrollToCurrentBook: Boolean = false, // Flag to trigger scroll from navigation
     viewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.Factory(
@@ -70,7 +72,11 @@ fun LibraryScreen(
     
     // Get playing state from audio player
     val isPlaying by context.appContainer.audiobookPlayer.isPlaying.collectAsState()
-    
+
+    // Auth state for sign-in banner
+    val authUser by context.appContainer.authRepository.authState.collectAsState(initial = context.appContainer.authRepository.currentUser)
+    var bannerDismissed by remember { mutableStateOf(false) }
+
     // LazyColumn scroll state
     val listState = rememberLazyListState()
     
@@ -316,6 +322,74 @@ fun LibraryScreen(
                     )
                 }
                 
+                // Sign-in banner (show when not authenticated)
+                if (authUser == null && !bannerDismissed) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface2)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Sync Your Progress",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary
+                                    )
+                                    IconButton(
+                                        onClick = { bannerDismissed = true },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Dismiss",
+                                            tint = TextTertiary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Sign in to save your listening progress across devices and track your stats.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = onSignInClick,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = AccentOrange
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text("Sign In")
+                                    }
+                                    OutlinedButton(
+                                        onClick = onSignUpClick,
+                                        border = BorderStroke(1.dp, AccentOrange),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text("Sign Up", color = AccentOrange)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Continue Reading section (only show if there's a current book)
                 currentBook?.let { book ->
                     item {

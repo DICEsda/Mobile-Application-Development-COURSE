@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +31,7 @@ import com.audiobook.app.ui.theme.*
 enum class NavItem(val label: String, val icon: ImageVector) {
     Library("Library", Icons.Outlined.LibraryMusic),
     Player("Player", Icons.Outlined.PlayArrow),
-    Profile("Profile", Icons.Outlined.Person)
+    Profile("Settings", Icons.Outlined.Settings)
 }
 
 @Composable

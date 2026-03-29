@@ -174,12 +174,20 @@ class ChapterParser(private val context: Context) {
                             bufferInfo.presentationTimeUs = extractor.sampleTime
                             bufferInfo.size = sampleSize
                             
-                            // Extract chapter text
+                            // Extract chapter text from tx3g format
+                            // tx3g samples have a 2-byte big-endian length prefix
                             val chapterBytes = ByteArray(sampleSize)
                             buffer.get(chapterBytes)
                             buffer.clear()
-                            
-                            val chapterText = String(chapterBytes, Charsets.UTF_8).trim()
+
+                            val chapterText = if (sampleSize > 2) {
+                                val textLength = ((chapterBytes[0].toInt() and 0xFF) shl 8) or
+                                        (chapterBytes[1].toInt() and 0xFF)
+                                val safeLength = textLength.coerceAtMost(sampleSize - 2)
+                                String(chapterBytes, 2, safeLength, Charsets.UTF_8).trim()
+                            } else {
+                                String(chapterBytes, Charsets.UTF_8).trim()
+                            }
                             if (chapterText.isNotEmpty()) {
                                 val startMs = bufferInfo.presentationTimeUs / 1000
                                 Log.d(TAG, "Chapter at ${startMs}ms: $chapterText")

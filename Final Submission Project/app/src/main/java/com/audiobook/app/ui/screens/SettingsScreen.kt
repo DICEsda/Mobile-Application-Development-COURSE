@@ -293,7 +293,7 @@ fun SettingsScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimePickerDialog(
+internal fun TimePickerDialog(
     initialHour: Int,
     initialMinute: Int,
     onDismiss: () -> Unit,
@@ -352,7 +352,7 @@ private fun TimePickerDialog(
  * Provides buttons to test all notification types.
  */
 @Composable
-private fun NotificationTestingSection(
+internal fun NotificationTestingSection(
     notificationScheduler: NotificationScheduler
 ) {
     var showTestDialog by remember { mutableStateOf(false) }
@@ -625,7 +625,7 @@ data class SettingItemData(
 )
 
 @Composable
-private fun SettingsSection(
+internal fun SettingsSection(
     title: String,
     items: List<SettingItemData>
 ) {

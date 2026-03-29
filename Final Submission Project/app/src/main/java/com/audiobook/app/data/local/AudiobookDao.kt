@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AudiobookDao {
     
-    // ========== Audiobook Queries ==========
+    // Audiobook Queries
     
     /**
      * Get all audiobooks sorted by date added (newest first).
@@ -83,7 +83,7 @@ interface AudiobookDao {
     @Query("SELECT * FROM audiobooks WHERE filePath = :path")
     suspend fun getAudiobookByPath(path: String): AudiobookEntity?
     
-    // ========== Audiobook Modifications ==========
+    // Audiobook Modifications
     
     /**
      * Insert a new audiobook (replace if exists).
@@ -127,7 +127,7 @@ interface AudiobookDao {
     @Query("DELETE FROM audiobooks")
     suspend fun deleteAllAudiobooks()
     
-    // ========== Chapter Operations ==========
+    // Chapter Operations
     
     /**
      * Get chapters for a specific audiobook.
@@ -214,6 +214,9 @@ interface ProgressDao {
     /**
      * Mark progress as synced to cloud.
      */
+    @Query("UPDATE progress SET chapterProgressJson = :json, isSyncedToCloud = 0 WHERE bookId = :bookId")
+    suspend fun updateChapterProgress(bookId: String, json: String)
+
     @Query("UPDATE progress SET isSyncedToCloud = 1 WHERE bookId = :bookId")
     suspend fun markAsSynced(bookId: String)
     

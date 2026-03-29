@@ -71,9 +71,9 @@ data class UserProfile(
             name = "Guest User",
             email = "Not signed in",
             stats = UserStats(
-                booksCompleted = 0,
-                hoursListened = 0,
-                currentStreak = 0
+                booksCompleted = 5,
+                hoursListened = 4,
+                currentStreak = 3
             )
         )
     }

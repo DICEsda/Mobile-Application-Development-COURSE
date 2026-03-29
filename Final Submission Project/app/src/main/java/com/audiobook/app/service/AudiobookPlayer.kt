@@ -68,7 +68,17 @@ class AudiobookPlayer(private val context: Context) {
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
     
     private var positionUpdateJob: Job? = null
-    
+
+    /**
+     * Suspend until the MediaController is connected.
+     */
+    suspend fun awaitConnection(timeoutMs: Long = 5000L) {
+        if (mediaController != null) return
+        kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+            isConnected.first { it }
+        }
+    }
+
     /**
      * Connect to the PlaybackService's MediaSession.
      * Call this when the UI becomes active.
@@ -147,9 +157,7 @@ class AudiobookPlayer(private val context: Context) {
         }
     }
     
-    // ============================================================
     // Playback Controls
-    // ============================================================
     
     /**
      * Play the current media item.
@@ -233,15 +241,19 @@ class AudiobookPlayer(private val context: Context) {
         mediaController?.stop()
     }
     
-    // ============================================================
     // Media Loading
-    // ============================================================
     
     /**
      * Load and play an audiobook.
      */
     fun playAudiobook(audiobook: Audiobook) {
-        val uri = audiobook.resolveUri() ?: return
+        android.util.Log.d("AudiobookPlayer", "playAudiobook: id=${audiobook.id}, filePath=${audiobook.filePath}, contentUri=${audiobook.contentUri}")
+        val uri = audiobook.resolveUri()
+        if (uri == null) {
+            android.util.Log.e("AudiobookPlayer", "resolveUri returned null — cannot play")
+            return
+        }
+        android.util.Log.d("AudiobookPlayer", "Playing URI: $uri")
         
         val mediaItem = MediaItem.Builder()
             .setMediaId(audiobook.id)
@@ -259,13 +271,16 @@ class AudiobookPlayer(private val context: Context) {
             )
             .build()
         
+        if (mediaController == null) {
+            android.util.Log.e("AudiobookPlayer", "mediaController is null — cannot play")
+        }
         mediaController?.let { controller ->
             controller.setMediaItem(mediaItem)
             controller.prepare()
             controller.play()
         }
     }
-    
+
     /**
      * Load and play from a content URI (e.g., from file picker).
      */
@@ -307,9 +322,7 @@ class AudiobookPlayer(private val context: Context) {
         }
     }
     
-    // ============================================================
     // Chapter Navigation
-    // ============================================================
     
     /**
      * Seek to a specific chapter.
@@ -346,9 +359,7 @@ class AudiobookPlayer(private val context: Context) {
         prevChapter?.let { seekToChapter(it) }
     }
     
-    // ============================================================
     // Utility Methods
-    // ============================================================
     
     /**
      * Format duration in milliseconds to "HH:MM:SS" or "MM:SS".
@@ -374,9 +385,7 @@ class AudiobookPlayer(private val context: Context) {
         return formatTime(remaining.coerceAtLeast(0))
     }
     
-    // ============================================================
     // Player Listener
-    // ============================================================
     
     private inner class PlayerListener : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {

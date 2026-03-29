@@ -27,9 +27,43 @@ class NotificationTriggerHelper(
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
     
-    // ============================================================
+    // First Audiobook Started
+
+    /**
+     * Trigger notification when a user starts listening to their first audiobook.
+     */
+    fun onFirstAudiobookStarted(bookTitle: String) {
+        helperScope.launch {
+            val userId = auth.currentUser?.uid ?: return@launch
+
+            if (!notificationRepository.shouldSendNotification("milestone")) {
+                return@launch
+            }
+
+            try {
+                // Check if this is truly the first book (no prior progress docs)
+                val progressDocs = firestore.collection("users")
+                    .document(userId)
+                    .collection("progress")
+                    .limit(2)
+                    .get()
+                    .await()
+
+                // Only show if this is the first (or only) progress entry
+                if (progressDocs.size() <= 1) {
+                    notificationScheduler.showMilestoneNotification(
+                        milestoneType = "first_audiobook",
+                        message = "You've started listening to your first audiobook! Enjoy \"$bookTitle\"."
+                    )
+                    notificationRepository.logNotificationSent("milestone")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NotificationTriggerHelper", "Failed to handle first audiobook notification", e)
+            }
+        }
+    }
+
     // Book Completion
-    // ============================================================
     
     /**
      * Trigger notification when a user completes a book.
@@ -76,7 +110,7 @@ class NotificationTriggerHelper(
                 notificationRepository.logNotificationSent("milestone")
             } catch (e: Exception) {
                 android.util.Log.e("NotificationTriggerHelper", "Failed to handle book completion", e)
-                // Continue execution - notification failure should not crash app
+                // Non-critical, continue
             }
         }
     }
@@ -101,9 +135,7 @@ class NotificationTriggerHelper(
         }
     }
     
-    // ============================================================
     // Listening Time Milestones
-    // ============================================================
     
     /**
      * Update listening time and check for milestones.
@@ -171,13 +203,11 @@ class NotificationTriggerHelper(
                 }
             }
         } catch (e: Exception) {
-            // Silently fail
+            // Non-critical, continue
         }
     }
     
-    // ============================================================
     // Streak Management
-    // ============================================================
     
     /**
      * Update user's listening streak.
@@ -220,7 +250,7 @@ class NotificationTriggerHelper(
                 )
             }
         } catch (e: Exception) {
-            // Silently fail
+            // Non-critical, continue
         }
     }
     
@@ -252,14 +282,12 @@ class NotificationTriggerHelper(
                     }
                 }
             } catch (e: Exception) {
-                // Silently fail
+                // Non-critical, continue
             }
         }
     }
     
-    // ============================================================
     // Initialization
-    // ============================================================
     
     /**
      * Initialize notification system on app start.
@@ -286,7 +314,7 @@ class NotificationTriggerHelper(
                 // Check streak status
                 checkStreakStatus()
             } catch (e: Exception) {
-                // Silently fail
+                // Non-critical, continue
             }
         }
     }

@@ -19,7 +19,7 @@ class LibraryViewModel(
     private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
     
-    // ========== UI State ==========
+    // UI State
     
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -30,7 +30,7 @@ class LibraryViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
     
-    // ========== Data Flows ==========
+    // Data Flows
     
     /**
      * All audiobooks in the library.
@@ -102,7 +102,7 @@ class LibraryViewModel(
         initialValue = ""
     )
     
-    // ========== Initialization ==========
+    // Initialization
     
     init {
         loadLibrary()
@@ -142,7 +142,7 @@ class LibraryViewModel(
         }
     }
     
-    // ========== User Actions ==========
+    // User Actions
     
     /**
      * Update search query.
@@ -230,7 +230,7 @@ class LibraryViewModel(
         _error.value = null
     }
     
-    // ========== Factory ==========
+    // Factory
     
     /**
      * Factory for creating LibraryViewModel with dependencies.

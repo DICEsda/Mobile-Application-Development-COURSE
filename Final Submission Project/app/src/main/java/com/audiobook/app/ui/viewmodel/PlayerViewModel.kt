@@ -53,6 +53,9 @@ class PlayerViewModel(
     
     private var sleepTimerJob: Job? = null
     
+    // Per-chapter progress tracking (chapter number -> max progress reached)
+    private val _chapterProgressMap = mutableMapOf<Int, Float>()
+
     // Error state for player failures
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -159,14 +162,26 @@ class PlayerViewModel(
                 }
             }
             .filterNotNull()
-            .debounce(500) // Save every 500ms for instant updates
+            .debounce(500)
             .collect { (bookId, progressValue, chapterNum) ->
+                // Update per-chapter progress map
+                val pos = currentPosition.value
+                for (ch in _chapters.value) {
+                    if (pos >= ch.startTimeMs && ch.endTimeMs > ch.startTimeMs) {
+                        val chProg = if (pos >= ch.endTimeMs) 1f
+                            else ((pos - ch.startTimeMs).toFloat() / (ch.endTimeMs - ch.startTimeMs).toFloat()).coerceIn(0f, 1f)
+                        val existing = _chapterProgressMap[ch.number] ?: 0f
+                        if (chProg > existing) _chapterProgressMap[ch.number] = chProg
+                    }
+                }
+
                 audiobookRepository.updateProgress(
                     bookId = bookId,
                     progress = progressValue,
                     currentChapter = chapterNum,
-                    positionMs = currentPosition.value
+                    positionMs = pos
                 )
+                audiobookRepository.saveChapterProgress(bookId, _chapterProgressMap.toMap())
                 
                 // Sync progress to Firestore for cross-device support
                 _currentBook.value?.let { book ->
@@ -239,7 +254,9 @@ class PlayerViewModel(
      */
     fun loadBook(bookId: String) {
         viewModelScope.launch {
+            android.util.Log.d("PlayerViewModel", "loadBook called with bookId=$bookId")
             val book = audiobookRepository.getAudiobook(bookId)
+            android.util.Log.d("PlayerViewModel", "getAudiobook result: ${book?.title}, filePath=${book?.filePath}, contentUri=${book?.contentUri}")
             if (book != null) {
                 _currentBook.value = book
                 
@@ -266,7 +283,15 @@ class PlayerViewModel(
                 }
                 
                 _chapters.value = chapters
-                
+
+                // Load saved per-chapter progress
+                val savedChapterProgress = audiobookRepository.getChapterProgress(bookId)
+                _chapterProgressMap.clear()
+                _chapterProgressMap.putAll(savedChapterProgress)
+
+                // Wait for MediaController connection before playing
+                audiobookPlayer.awaitConnection()
+
                 // Start playback, resuming from saved position if available
                 try {
                     val savedPosition = audiobookRepository.getPlaybackPosition(bookId)
@@ -274,6 +299,7 @@ class PlayerViewModel(
                         audiobookPlayer.resumeFromPosition(book, savedPosition)
                     } else {
                         audiobookPlayer.playAudiobook(book)
+                        notificationTriggerHelper.onFirstAudiobookStarted(book.title)
                     }
                     audiobookRepository.setCurrentBook(book)
                     _error.value = null
@@ -427,19 +453,20 @@ class PlayerViewModel(
     fun getChaptersWithPlayingState(): List<Chapter> {
         val currentPos = currentPosition.value
         val currentChapterNum = _currentChapter.value?.number
-        
+
         return _chapters.value.map { chapter ->
             val isPlaying = chapter.number == currentChapterNum
-            val chapterProgress = if (isPlaying && chapter.endTimeMs > chapter.startTimeMs) {
+            val liveProgress = if (isPlaying && chapter.endTimeMs > chapter.startTimeMs) {
                 val chapterDuration = chapter.endTimeMs - chapter.startTimeMs
                 val positionInChapter = currentPos - chapter.startTimeMs
                 (positionInChapter.toFloat() / chapterDuration.toFloat()).coerceIn(0f, 1f)
-            } else if (chapter.endTimeMs > 0 && currentPos >= chapter.endTimeMs) {
-                1f // Completed chapter
             } else {
                 0f
             }
-            
+            // Use the higher of live progress or saved progress
+            val savedProgress = _chapterProgressMap[chapter.number] ?: 0f
+            val chapterProgress = maxOf(liveProgress, savedProgress)
+
             chapter.copy(
                 isPlaying = isPlaying,
                 progress = chapterProgress
