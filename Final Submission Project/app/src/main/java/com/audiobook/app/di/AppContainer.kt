@@ -118,7 +118,7 @@ class AppContainer(private val context: Context) {
      * Enables cross-device progress tracking.
      */
     val progressSyncRepository: ProgressSyncRepository by lazy {
-        ProgressSyncRepository(progressDao)
+        ProgressSyncRepository(progressDao, audiobookDao)
     }
 
     /**

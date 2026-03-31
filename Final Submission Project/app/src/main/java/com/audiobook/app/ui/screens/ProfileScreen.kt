@@ -29,8 +29,12 @@ import com.audiobook.app.ui.components.NavItem
 import com.audiobook.app.ui.components.NotificationPermissionCard
 import com.audiobook.app.ui.components.rememberNotificationPermissionState
 import com.audiobook.app.ui.theme.*
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +42,9 @@ fun ProfileScreen(
     onLibraryClick: () -> Unit,
     onPlayerClick: () -> Unit,
     onSettingsClick: () -> Unit = {},
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onSignInClick: () -> Unit = {},
+    onSignUpClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -48,15 +54,40 @@ fun ProfileScreen(
 
     // Auth state
     val authUser by context.appContainer.authRepository.authState.collectAsState(initial = null)
+    val isSignedIn = context.appContainer.authRepository.isSignedIn
+
+    // Fetch real stats from Firestore when signed in
+    var userStats by remember { mutableStateOf(UserStats(0, 0, 0)) }
+    LaunchedEffect(authUser?.uid) {
+        val uid = authUser?.uid
+        if (uid != null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val doc = FirebaseFirestore.getInstance()
+                        .collection("users").document(uid).get().await()
+                    userStats = UserStats(
+                        booksCompleted = doc.getLong("booksCompleted")?.toInt() ?: 0,
+                        hoursListened = (doc.getLong("totalMinutesListened") ?: 0).toInt() / 60,
+                        currentStreak = doc.getLong("currentStreak")?.toInt() ?: 0
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.e("ProfileScreen", "Failed to fetch user stats", e)
+                }
+            }
+        } else {
+            userStats = UserStats(0, 0, 0)
+        }
+    }
+
     val profile = if (authUser != null) {
-        UserProfile.default.copy(
+        UserProfile(
             name = authUser?.displayName ?: authUser?.email?.substringBefore("@") ?: "User",
-            email = authUser?.email ?: "Not signed in"
+            email = authUser?.email ?: "Not signed in",
+            stats = userStats
         )
     } else {
         UserProfile.default
     }
-    val isSignedIn = context.appContainer.authRepository.isSignedIn
 
     // Playing state
     val isPlaying by context.appContainer.audiobookPlayer.isPlaying.collectAsState()
@@ -66,6 +97,10 @@ fun ProfileScreen(
     val notificationPrefs by notificationRepository.preferences.collectAsState(
         initial = com.audiobook.app.data.repository.NotificationPreferences()
     )
+
+    // Biometric lock preference
+    val biometricEnabled by preferencesRepository.rememberBiometric
+        .collectAsState(initial = false)
 
     // Preferences
     val currentFolderPath by preferencesRepository.audiobookFolderPath
@@ -291,6 +326,18 @@ fun ProfileScreen(
                     title = "App Settings",
                     items = listOf(
                         SettingItemData(
+                            icon = Icons.Outlined.Fingerprint,
+                            label = "Biometric Lock",
+                            type = SettingType.Toggle(
+                                value = biometricEnabled,
+                                onValueChange = { enabled ->
+                                    scope.launch {
+                                        preferencesRepository.setRememberBiometric(enabled)
+                                    }
+                                }
+                            )
+                        ),
+                        SettingItemData(
                             icon = Icons.Outlined.Folder,
                             label = "Audiobook Folder",
                             type = SettingType.Action,
@@ -322,6 +369,26 @@ fun ProfileScreen(
                                         context.appContainer.authRepository.signOut()
                                     }
                                 }
+                            )
+                        )
+                    )
+                }
+            } else {
+                item {
+                    SettingsSection(
+                        title = "Account",
+                        items = listOf(
+                            SettingItemData(
+                                icon = Icons.Outlined.Login,
+                                label = "Sign In",
+                                type = SettingType.Action,
+                                onClick = onSignInClick
+                            ),
+                            SettingItemData(
+                                icon = Icons.Outlined.PersonAdd,
+                                label = "Create Account",
+                                type = SettingType.Action,
+                                onClick = onSignUpClick
                             )
                         )
                     )

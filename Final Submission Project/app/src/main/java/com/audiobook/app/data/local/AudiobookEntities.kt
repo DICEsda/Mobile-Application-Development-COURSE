@@ -48,7 +48,8 @@ data class ChapterEntity(
     val chapterNumber: Int,
     val title: String,
     val startTimeMs: Long,
-    val endTimeMs: Long
+    val endTimeMs: Long,
+    val fileUri: String? = null // Per-chapter file URI for multi-file (MP3 folder) audiobooks
 )
 
 /**
@@ -146,7 +147,8 @@ fun ChapterEntity.toDomainModel(): Chapter {
         number = chapterNumber,
         title = title,
         startTimeMs = startTimeMs,
-        endTimeMs = endTimeMs
+        endTimeMs = endTimeMs,
+        fileUri = fileUri
     )
 }
 
@@ -156,7 +158,8 @@ fun Chapter.toEntity(bookId: String, chapterNumber: Int): ChapterEntity {
         chapterNumber = chapterNumber,
         title = title,
         startTimeMs = startTimeMs,
-        endTimeMs = endTimeMs
+        endTimeMs = endTimeMs,
+        fileUri = fileUri
     )
 }
 

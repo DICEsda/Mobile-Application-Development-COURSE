@@ -16,7 +16,18 @@ node_modules/
 .DS_Store
 gradle-*-bin.zip
 *.m4b
+*.m4a
 opencode.json
+nul
+
+# Claude Code
+.claude/
+
+# MCP servers
+mobile-mcp/
+
+# M4B generator (moved to Archive or standalone)
+m3b Gen/
 
 # Firebase config (contains API keys)
 google-services.json

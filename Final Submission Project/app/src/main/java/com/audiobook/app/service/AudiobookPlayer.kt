@@ -139,11 +139,37 @@ class AudiobookPlayer(private val context: Context) {
     
     private fun updatePosition() {
         mediaController?.let { controller ->
-            _currentPosition.value = controller.currentPosition
-            _duration.value = controller.duration.coerceAtLeast(0)
-            _progress.value = if (_duration.value > 0) {
-                _currentPosition.value.toFloat() / _duration.value.toFloat()
-            } else 0f
+            val isMultiFile = _currentChapters.any { it.fileUri != null }
+
+            if (isMultiFile && _currentChapters.isNotEmpty()) {
+                // Multi-file: calculate cumulative position across all chapters
+                val currentItemIndex = controller.currentMediaItemIndex
+                val positionInCurrentItem = controller.currentPosition
+
+                // Cumulative position = sum of previous chapter durations + position in current
+                var cumulativeMs = 0L
+                for (i in 0 until currentItemIndex.coerceAtMost(_currentChapters.size)) {
+                    val ch = _currentChapters[i]
+                    cumulativeMs += ch.endTimeMs - ch.startTimeMs
+                }
+                cumulativeMs += positionInCurrentItem
+
+                // Total duration = sum of all chapter durations
+                val totalDurationMs = _currentChapters.sumOf { it.endTimeMs - it.startTimeMs }
+
+                _currentPosition.value = cumulativeMs
+                _duration.value = totalDurationMs.coerceAtLeast(0)
+                _progress.value = if (totalDurationMs > 0) {
+                    cumulativeMs.toFloat() / totalDurationMs.toFloat()
+                } else 0f
+            } else {
+                // Single-file: standard position tracking
+                _currentPosition.value = controller.currentPosition
+                _duration.value = controller.duration.coerceAtLeast(0)
+                _progress.value = if (_duration.value > 0) {
+                    _currentPosition.value.toFloat() / _duration.value.toFloat()
+                } else 0f
+            }
         }
     }
     
@@ -242,19 +268,29 @@ class AudiobookPlayer(private val context: Context) {
     }
     
     // Media Loading
-    
+
     /**
      * Load and play an audiobook.
+     * Detects whether this is a single-file (M4B) or multi-file (MP3 folder) audiobook
+     * and sets up playback accordingly.
      */
     fun playAudiobook(audiobook: Audiobook) {
         android.util.Log.d("AudiobookPlayer", "playAudiobook: id=${audiobook.id}, filePath=${audiobook.filePath}, contentUri=${audiobook.contentUri}")
+
+        // Check if this is a multi-file audiobook (chapters have individual file URIs)
+        val isMultiFile = audiobook.chapters.any { it.fileUri != null }
+        if (isMultiFile && audiobook.chapters.isNotEmpty()) {
+            playMultiFileAudiobook(audiobook)
+            return
+        }
+
         val uri = audiobook.resolveUri()
         if (uri == null) {
             android.util.Log.e("AudiobookPlayer", "resolveUri returned null — cannot play")
             return
         }
         android.util.Log.d("AudiobookPlayer", "Playing URI: $uri")
-        
+
         val mediaItem = MediaItem.Builder()
             .setMediaId(audiobook.id)
             .setUri(uri)
@@ -270,12 +306,52 @@ class AudiobookPlayer(private val context: Context) {
                     .build()
             )
             .build()
-        
+
         if (mediaController == null) {
             android.util.Log.e("AudiobookPlayer", "mediaController is null — cannot play")
         }
         mediaController?.let { controller ->
             controller.setMediaItem(mediaItem)
+            controller.prepare()
+            controller.play()
+        }
+    }
+
+    /**
+     * Play a multi-file audiobook by building a playlist where each chapter
+     * is a separate MediaItem pointing to its own audio file.
+     * ExoPlayer handles playlist navigation natively.
+     */
+    private fun playMultiFileAudiobook(audiobook: Audiobook) {
+        android.util.Log.d("AudiobookPlayer", "playMultiFileAudiobook: ${audiobook.chapters.size} chapters")
+
+        val artworkUri = if (audiobook.coverUrl.isNotBlank()) Uri.parse(audiobook.coverUrl) else null
+
+        val mediaItems = audiobook.chapters.mapNotNull { chapter ->
+            val chapterUri = chapter.fileUri ?: return@mapNotNull null
+            MediaItem.Builder()
+                .setMediaId("${audiobook.id}_chapter_${chapter.number}")
+                .setUri(Uri.parse(chapterUri))
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(chapter.title)
+                        .setArtist(audiobook.author)
+                        .setAlbumTitle(audiobook.title)
+                        .setTrackNumber(chapter.number)
+                        .setDisplayTitle("${audiobook.title} - ${chapter.title}")
+                        .setArtworkUri(artworkUri)
+                        .build()
+                )
+                .build()
+        }
+
+        if (mediaItems.isEmpty()) {
+            android.util.Log.e("AudiobookPlayer", "No valid chapter URIs for multi-file audiobook")
+            return
+        }
+
+        mediaController?.let { controller ->
+            controller.setMediaItems(mediaItems)
             controller.prepare()
             controller.play()
         }
@@ -305,15 +381,32 @@ class AudiobookPlayer(private val context: Context) {
     
     /**
      * Resume from a saved position.
+     * For multi-file audiobooks, determines the correct playlist item and
+     * position within that item based on the cumulative position.
      */
     fun resumeFromPosition(audiobook: Audiobook, positionMs: Long) {
         playAudiobook(audiobook)
+
+        val isMultiFile = audiobook.chapters.any { it.fileUri != null }
+
         mediaController?.let { controller ->
-            // Use player state listener to seek when ready instead of hardcoded delay
             val listener = object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
                     if (state == Player.STATE_READY) {
-                        controller.seekTo(positionMs)
+                        if (isMultiFile && audiobook.chapters.isNotEmpty()) {
+                            // Find which chapter the position falls into
+                            val chapter = audiobook.chapters.find { ch ->
+                                positionMs >= ch.startTimeMs && positionMs < ch.endTimeMs
+                            } ?: audiobook.chapters.lastOrNull()
+
+                            if (chapter != null) {
+                                val chapterIndex = audiobook.chapters.indexOf(chapter)
+                                val positionInChapter = positionMs - chapter.startTimeMs
+                                controller.seekTo(chapterIndex, positionInChapter.coerceAtLeast(0))
+                            }
+                        } else {
+                            controller.seekTo(positionMs)
+                        }
                         controller.removeListener(this)
                     }
                 }
@@ -323,14 +416,35 @@ class AudiobookPlayer(private val context: Context) {
     }
     
     // Chapter Navigation
-    
+
+    /** Tracks whether the current audiobook is multi-file (set during playAudiobook) */
+    private var _currentChapters: List<Chapter> = emptyList()
+
+    /**
+     * Update the chapter list for the currently loaded audiobook.
+     * Called by PlayerViewModel when loading a book.
+     */
+    fun setChapters(chapters: List<Chapter>) {
+        _currentChapters = chapters
+    }
+
     /**
      * Seek to a specific chapter.
+     * For multi-file audiobooks, seeks to the playlist item index.
+     * For single-file, seeks to the chapter's start time.
      */
     fun seekToChapter(chapter: Chapter) {
-        seekTo(chapter.startTimeMs)
+        if (chapter.fileUri != null) {
+            // Multi-file: seek to the playlist item at the chapter's index
+            val chapterIndex = _currentChapters.indexOfFirst { it.number == chapter.number }
+            if (chapterIndex >= 0) {
+                mediaController?.seekTo(chapterIndex, 0)
+            }
+        } else {
+            seekTo(chapter.startTimeMs)
+        }
     }
-    
+
     /**
      * Get the current chapter based on playback position.
      */
@@ -340,23 +454,41 @@ class AudiobookPlayer(private val context: Context) {
             position >= chapter.startTimeMs && position < chapter.endTimeMs
         }
     }
-    
+
     /**
      * Jump to the next chapter.
      */
     fun nextChapter(chapters: List<Chapter>) {
-        val currentChapter = getCurrentChapter(chapters) ?: return
-        val nextChapter = chapters.find { it.number == currentChapter.number + 1 }
-        nextChapter?.let { seekToChapter(it) }
+        val isMultiFile = chapters.any { it.fileUri != null }
+        if (isMultiFile) {
+            mediaController?.let { controller ->
+                if (controller.hasNextMediaItem()) {
+                    controller.seekToNextMediaItem()
+                }
+            }
+        } else {
+            val currentChapter = getCurrentChapter(chapters) ?: return
+            val nextChapter = chapters.find { it.number == currentChapter.number + 1 }
+            nextChapter?.let { seekToChapter(it) }
+        }
     }
-    
+
     /**
      * Jump to the previous chapter.
      */
     fun previousChapter(chapters: List<Chapter>) {
-        val currentChapter = getCurrentChapter(chapters) ?: return
-        val prevChapter = chapters.find { it.number == currentChapter.number - 1 }
-        prevChapter?.let { seekToChapter(it) }
+        val isMultiFile = chapters.any { it.fileUri != null }
+        if (isMultiFile) {
+            mediaController?.let { controller ->
+                if (controller.hasPreviousMediaItem()) {
+                    controller.seekToPreviousMediaItem()
+                }
+            }
+        } else {
+            val currentChapter = getCurrentChapter(chapters) ?: return
+            val prevChapter = chapters.find { it.number == currentChapter.number - 1 }
+            prevChapter?.let { seekToChapter(it) }
+        }
     }
     
     // Utility Methods

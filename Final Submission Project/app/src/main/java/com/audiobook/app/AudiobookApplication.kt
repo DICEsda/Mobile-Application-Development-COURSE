@@ -5,29 +5,55 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import com.audiobook.app.di.AppContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Application class for the Audiobook Player.
  * Initializes the Manual DI container at application startup.
  */
 class AudiobookApplication : Application() {
-    
+
     /**
      * Manual DI container holding application-scoped dependencies.
      * Accessible from any context via (context.applicationContext as AudiobookApplication).container
      */
     lateinit var container: AppContainer
         private set
-    
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        
+
         // Create notification channels at startup
         createNotificationChannels()
-        
+
         // Initialize notification system
         container.notificationTriggerHelper.initialize()
+
+        // Sync Firestore progress on startup
+        syncFirestoreProgress()
+    }
+
+    /**
+     * Sync progress with Firestore on app start.
+     * Pushes any unsynced local progress and pulls cloud updates.
+     */
+    private fun syncFirestoreProgress() {
+        appScope.launch {
+            try {
+                // Push any locally-accumulated progress that wasn't synced
+                container.progressSyncRepository.syncUnsyncedProgress()
+                // Pull latest progress from cloud (other devices)
+                container.progressSyncRepository.pullCloudProgress()
+            } catch (e: Exception) {
+                android.util.Log.e("AudiobookApp", "Firestore sync on startup failed", e)
+            }
+        }
     }
     
     /**

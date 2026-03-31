@@ -107,27 +107,40 @@ class MainActivity : FragmentActivity() {
                     super.onAuthenticationFailed()
                 }
             })
-
-        promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock Library")
-            .setSubtitle("Use your fingerprint to access your audiobooks")
-            .setNegativeButtonText("Cancel")
-            .build()
     }
 
     private fun authenticate(onResult: (Boolean) -> Unit) {
         val biometricManager = BiometricManager.from(this)
+        val canBiometric = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+        val canDeviceCredential = biometricManager.canAuthenticate(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
 
-        when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> {
-                onAuthSuccess = { onResult(true) }
+        onAuthSuccess = { onResult(true) }
+
+        when {
+            canBiometric == BiometricManager.BIOMETRIC_SUCCESS -> {
+                // Strong biometric available — prefer fingerprint/face
+                promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("Unlock Library")
+                    .setSubtitle("Use your fingerprint to access your audiobooks")
+                    .setNegativeButtonText("Use PIN instead")
+                    .build()
+                biometricPrompt.authenticate(promptInfo)
+            }
+            canDeviceCredential == BiometricManager.BIOMETRIC_SUCCESS -> {
+                // No biometric but device has PIN/pattern/password — fall back
+                promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle("Unlock Library")
+                    .setSubtitle("Verify your identity to access your audiobooks")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build()
                 biometricPrompt.authenticate(promptInfo)
             }
             else -> {
+                // No secure lock screen at all — deny access
                 onResult(false)
                 android.widget.Toast.makeText(
                     this,
-                    "Biometric authentication is required but not available on this device",
+                    "Please set up a screen lock (PIN, pattern, or fingerprint) in device settings to use this feature",
                     android.widget.Toast.LENGTH_LONG
                 ).show()
             }

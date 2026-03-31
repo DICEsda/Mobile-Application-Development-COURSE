@@ -14,6 +14,7 @@ import com.audiobook.app.data.local.toDomainModel
 import com.audiobook.app.data.local.toEntity
 import com.audiobook.app.data.model.Audiobook
 import com.audiobook.app.data.parser.ChapterParser
+import com.audiobook.app.data.parser.MP3FolderParser
 import com.audiobook.app.data.remote.BookMetadataRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -36,6 +37,7 @@ class AudiobookScanner(
 ) {
 
     private val chapterParser = ChapterParser(context)
+    private val mp3FolderParser = MP3FolderParser(context)
 
     companion object {
         private const val TAG = "AudiobookScanner"
@@ -158,8 +160,9 @@ class AudiobookScanner(
         val folder = getAudiobooksFolder()
         if (!folder.exists() || !folder.isDirectory) return
 
+        // Scan for single-file audiobooks (M4B/M4A)
         val audioFiles = folder.walkTopDown()
-            .filter { it.isFile && it.extension.equals("m4b", true) || it.extension.equals("m4a", true) }
+            .filter { it.isFile && (it.extension.equals("m4b", true) || it.extension.equals("m4a", true)) }
             .toList()
 
         for (file in audioFiles) {
@@ -179,6 +182,49 @@ class AudiobookScanner(
                 persistAudiobook(audiobook)
             } catch (e: Exception) {
                 Log.e(TAG, "Skipping unprocessable file during scan", e)
+            }
+        }
+
+        // Scan for MP3 folder audiobooks (subfolders containing audio files)
+        scanMP3Folders(folder, results)
+    }
+
+    // ──────────────────── MP3 folder scanning (file-based) ────────────────────
+
+    /**
+     * Scan immediate subdirectories of [parentFolder] for folders containing
+     * audio files (MP3, FLAC, etc.) and treat each as a single audiobook.
+     */
+    private suspend fun scanMP3Folders(parentFolder: File, results: MutableList<Audiobook>) {
+        val subDirs = parentFolder.listFiles()?.filter { it.isDirectory } ?: return
+
+        for (dir in subDirs) {
+            try {
+                // Check if this folder contains audio files
+                val hasAudioFiles = dir.listFiles()?.any { file ->
+                    file.isFile && file.extension.lowercase() in MP3FolderParser.AUDIO_EXTENSIONS
+                } == true
+
+                if (!hasAudioFiles) continue
+
+                // Check if already scanned (use folder path as identifier)
+                val folderPath = dir.absolutePath
+                val existing = audiobookDao?.getAudiobookByPath(folderPath)
+                if (existing != null) {
+                    val progress = progressDao?.getProgress(existing.id)
+                    results.add(existing.toDomainModel(
+                        progress = progress?.progress ?: 0f,
+                        currentChapter = progress?.currentChapter ?: 1
+                    ))
+                    continue
+                }
+
+                val folderAudiobook = mp3FolderParser.parseFolder(dir) ?: continue
+                val audiobook = folderAudiobookToAudiobook(folderAudiobook)
+                results.add(audiobook)
+                persistAudiobook(audiobook)
+            } catch (e: Exception) {
+                Log.e(TAG, "Skipping unprocessable MP3 folder: ${dir.name}", e)
             }
         }
     }
@@ -245,9 +291,44 @@ class AudiobookScanner(
     // ──────────────────── SAF / DocumentFile scanning ────────────────────
 
     private suspend fun scanDocumentFolder(folder: DocumentFile, results: MutableList<Audiobook>) {
-        for (file in folder.listFiles()) {
+        val files = folder.listFiles()
+
+        for (file in files) {
             if (file.isDirectory) {
-                scanDocumentFolder(file, results)
+                // Check if this subfolder is an MP3 audiobook folder
+                val hasAudioFiles = file.listFiles().any { child ->
+                    child.isFile && child.name?.let { name ->
+                        val ext = name.substringAfterLast('.', "").lowercase()
+                        ext in MP3FolderParser.AUDIO_EXTENSIONS
+                    } == true
+                }
+
+                if (hasAudioFiles) {
+                    // Treat this folder as a multi-file audiobook
+                    try {
+                        val folderUri = file.uri.toString()
+                        val existing = audiobookDao?.getAudiobookByPath(folderUri)
+                        if (existing != null) {
+                            val progress = progressDao?.getProgress(existing.id)
+                            results.add(existing.toDomainModel(
+                                progress = progress?.progress ?: 0f,
+                                currentChapter = progress?.currentChapter ?: 1
+                            ))
+                        } else {
+                            val folderAudiobook = mp3FolderParser.parseDocumentFolder(file)
+                            if (folderAudiobook != null) {
+                                val audiobook = folderAudiobookToAudiobook(folderAudiobook)
+                                results.add(audiobook)
+                                persistAudiobook(audiobook)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Skipping unprocessable MP3 folder: ${file.name}", e)
+                    }
+                } else {
+                    // Recurse into non-audiobook subfolders to find M4B files
+                    scanDocumentFolder(file, results)
+                }
             } else if (file.isFile) {
                 val name = file.name ?: continue
                 if (!name.endsWith(".m4b", true) && !name.endsWith(".m4a", true)) continue
@@ -393,6 +474,38 @@ class AudiobookScanner(
             Log.e(TAG, "Error extracting description", e)
             null
         }
+    }
+
+    // ──────────────────── MP3 folder → Audiobook conversion ────────────────────
+
+    /**
+     * Convert an [MP3FolderParser.FolderAudiobook] into the app's [Audiobook] domain model,
+     * saving cover art to disk if present.
+     */
+    private fun folderAudiobookToAudiobook(
+        folder: MP3FolderParser.FolderAudiobook
+    ): Audiobook {
+        val bookId = folder.folderPath.hashCode().toString()
+
+        val coverUrl = folder.coverArt?.let { bitmap ->
+            val url = saveCoverArt(bookId, bitmap)
+            bitmap.recycle()
+            url
+        } ?: ""
+
+        return Audiobook(
+            id = bookId,
+            title = folder.title,
+            author = folder.author,
+            coverUrl = coverUrl,
+            duration = formatDuration(folder.durationMs),
+            totalDurationMinutes = (folder.durationMs / 60000).toInt(),
+            chapters = folder.chapters,
+            filePath = folder.folderPath,
+            contentUri = folder.folderPath,
+            description = folder.description,
+            narrator = folder.narrator
+        )
     }
 
     // ──────────────────── utilities ────────────────────

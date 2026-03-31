@@ -48,7 +48,8 @@ data class M2BChapter(
     val title: String,
     val startMs: Long,
     val endMs: Long,
-    val durationMs: Long
+    val durationMs: Long,
+    val fileUri: String? = null // Per-chapter file URI for multi-file audiobooks
 ) {
     companion object {
         fun fromChapter(chapter: Chapter): M2BChapter {
@@ -57,11 +58,12 @@ data class M2BChapter(
                 title = chapter.title,
                 startMs = chapter.startTimeMs,
                 endMs = chapter.endTimeMs,
-                durationMs = chapter.endTimeMs - chapter.startTimeMs
+                durationMs = chapter.endTimeMs - chapter.startTimeMs,
+                fileUri = chapter.fileUri
             )
         }
     }
-    
+
     fun toChapter(): Chapter {
         return Chapter(
             id = number,
@@ -70,7 +72,8 @@ data class M2BChapter(
             startTimeMs = startMs,
             endTimeMs = endMs,
             duration = formatDuration(durationMs),
-            durationMinutes = (durationMs / 60000).toInt()
+            durationMinutes = (durationMs / 60000).toInt(),
+            fileUri = fileUri
         )
     }
     

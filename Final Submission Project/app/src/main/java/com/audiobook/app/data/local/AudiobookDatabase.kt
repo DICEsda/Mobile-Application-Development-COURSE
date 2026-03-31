@@ -22,7 +22,7 @@ import androidx.room.RoomDatabase
         ChapterEntity::class,
         ProgressEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AudiobookDatabase : RoomDatabase() {

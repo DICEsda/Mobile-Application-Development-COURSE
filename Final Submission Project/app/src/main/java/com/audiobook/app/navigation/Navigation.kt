@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import com.audiobook.app.appContainer
 import com.audiobook.app.ui.screens.*
 import com.audiobook.app.ui.viewmodel.PlayerViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -67,6 +68,15 @@ fun AppNavigation(
             SignInScreen(
                 authRepository = context.appContainer.authRepository,
                 onSignInSuccess = {
+                    // Sync Firestore progress after successful sign-in
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            context.appContainer.progressSyncRepository.syncUnsyncedProgress()
+                            context.appContainer.progressSyncRepository.pullCloudProgress()
+                        } catch (e: Exception) {
+                            android.util.Log.e("Navigation", "Post-login sync failed", e)
+                        }
+                    }
                     navController.navigate(Screen.Library.route) {
                         popUpTo(Screen.SignIn.route) { inclusive = true }
                     }
@@ -76,11 +86,20 @@ fun AppNavigation(
                 }
             )
         }
-        
+
         composable(Screen.SignUp.route) {
             SignUpScreen(
                 authRepository = context.appContainer.authRepository,
                 onSignUpSuccess = {
+                    // Sync Firestore progress after successful sign-up
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            context.appContainer.progressSyncRepository.syncUnsyncedProgress()
+                            context.appContainer.progressSyncRepository.pullCloudProgress()
+                        } catch (e: Exception) {
+                            android.util.Log.e("Navigation", "Post-signup sync failed", e)
+                        }
+                    }
                     navController.navigate(Screen.Library.route) {
                         popUpTo(Screen.SignUp.route) { inclusive = true }
                     }
@@ -209,6 +228,12 @@ fun AppNavigation(
                             navController.navigate(Screen.Player.createRoute(currentBookId))
                         }
                     }
+                },
+                onSignInClick = {
+                    navController.navigate(Screen.SignIn.route)
+                },
+                onSignUpClick = {
+                    navController.navigate(Screen.SignUp.route)
                 }
             )
         }

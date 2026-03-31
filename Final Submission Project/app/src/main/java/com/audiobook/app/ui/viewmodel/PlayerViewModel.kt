@@ -187,11 +187,13 @@ class PlayerViewModel(
                 _currentBook.value?.let { book ->
                     viewModelScope.launch {
                         try {
+                            val totalMs = duration.value.takeIf { it > 0 }
+                                ?: (book.totalDurationMinutes * 60_000L)
                             val playbackProgress = com.audiobook.app.data.repository.PlaybackProgress(
                                 bookId = bookId,
                                 bookTitle = book.title,
                                 positionMs = currentPosition.value,
-                                totalDurationMs = duration.value,
+                                totalDurationMs = totalMs,
                                 lastChapter = chapterNum,
                                 playbackSpeed = playbackSpeed.value
                             )
@@ -242,6 +244,7 @@ class PlayerViewModel(
                     if (book != null) {
                         _currentBook.value = book
                         _chapters.value = book.chapters
+                        audiobookPlayer.setChapters(book.chapters)
                     }
                 }
             }
@@ -283,6 +286,9 @@ class PlayerViewModel(
                 }
                 
                 _chapters.value = chapters
+
+                // Inform the player about the chapter list (needed for multi-file navigation)
+                audiobookPlayer.setChapters(chapters)
 
                 // Load saved per-chapter progress
                 val savedChapterProgress = audiobookRepository.getChapterProgress(bookId)

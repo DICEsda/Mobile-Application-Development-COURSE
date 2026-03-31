@@ -36,6 +36,7 @@ import kotlinx.coroutines.withContext
  */
 class ProgressSyncRepository(
     private val progressDao: ProgressDao? = null,
+    private val audiobookDao: com.audiobook.app.data.local.AudiobookDao? = null,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
@@ -108,12 +109,14 @@ class ProgressSyncRepository(
             
             unsyncedProgress.forEach { entity ->
                 try {
+                    // Look up book title and duration from local DB
+                    val book = audiobookDao?.getAudiobookById(entity.bookId)
                     val data = mapOf(
                         "positionMs" to entity.currentPositionMs,
-                        "totalDurationMs" to 0L, // We don't store total duration in local DB
+                        "totalDurationMs" to ((book?.totalDurationMinutes ?: 0) * 60_000L),
                         "lastChapter" to entity.currentChapter,
                         "lastUpdated" to com.google.firebase.Timestamp.now(),
-                        "bookTitle" to "", // We'd need to join with audiobooks table
+                        "bookTitle" to (book?.title ?: ""),
                         "playbackSpeed" to entity.playbackSpeed
                     )
                     

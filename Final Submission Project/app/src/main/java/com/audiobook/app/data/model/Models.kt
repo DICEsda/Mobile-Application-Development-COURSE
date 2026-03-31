@@ -38,7 +38,8 @@ data class Chapter(
     val isPlaying: Boolean = false,
     val progress: Float = 0f, // 0.0 to 1.0
     val startTimeMs: Long = 0L, // Chapter start time in milliseconds
-    val endTimeMs: Long = 0L // Chapter end time in milliseconds
+    val endTimeMs: Long = 0L, // Chapter end time in milliseconds
+    val fileUri: String? = null // Per-chapter file URI (set for multi-file MP3 audiobooks, null for single-file M4B)
 ) {
     /**
      * Calculate duration string from start/end times if not provided.
@@ -71,9 +72,9 @@ data class UserProfile(
             name = "Guest User",
             email = "Not signed in",
             stats = UserStats(
-                booksCompleted = 5,
-                hoursListened = 4,
-                currentStreak = 3
+                booksCompleted = 0,
+                hoursListened = 0,
+                currentStreak = 0
             )
         )
     }
