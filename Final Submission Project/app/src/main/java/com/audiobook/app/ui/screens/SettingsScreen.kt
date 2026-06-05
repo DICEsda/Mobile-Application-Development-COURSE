@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.audiobook.app.appContainer
+import com.audiobook.app.data.remote.llm.LlmConfig
 import com.audiobook.app.data.repository.NotificationRepository
 import com.audiobook.app.service.NotificationScheduler
 import com.audiobook.app.ui.components.BottomNavBar
@@ -256,6 +257,11 @@ fun SettingsScreen(
                 )
             }
             
+            // Book Companion (AI) Section
+            item {
+                BookCompanionSettingsSection()
+            }
+
             // Developer Testing Section
             item {
                 NotificationTestingSection(
@@ -605,6 +611,168 @@ private fun TestNotificationButton(
                 tint = TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
+        }
+    }
+}
+
+/**
+ * Settings for the AI Book Companion (local LLM via LM Studio).
+ *
+ * An enable toggle reusing the standard section style, plus a config card
+ * (server URL, model, and a "Test connection" probe) shown only when enabled.
+ */
+@Composable
+internal fun BookCompanionSettingsSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val preferencesRepository = context.appContainer.preferencesRepository
+
+    val enabled by preferencesRepository.llmEnabled.collectAsState(initial = false)
+    val savedBaseUrl by preferencesRepository.llmBaseUrl.collectAsState(initial = LlmConfig.DEFAULT_BASE_URL)
+    val savedModel by preferencesRepository.llmModel.collectAsState(initial = LlmConfig.DEFAULT_MODEL)
+
+    // Seed editable fields once from the persisted values, then let the user edit.
+    var baseUrl by remember { mutableStateOf<String?>(null) }
+    var model by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(savedBaseUrl) { if (baseUrl == null) baseUrl = savedBaseUrl }
+    LaunchedEffect(savedModel) { if (model == null) model = savedModel }
+
+    var testing by remember { mutableStateOf(false) }
+    var testStatus by remember { mutableStateOf<String?>(null) }
+    var testSuccess by remember { mutableStateOf(false) }
+
+    SettingsSection(
+        title = "Book Companion (AI)",
+        items = listOf(
+            SettingItemData(
+                icon = Icons.Outlined.AutoAwesome,
+                label = "Enable AI Companion",
+                type = SettingType.Toggle(
+                    value = enabled,
+                    onValueChange = { on -> scope.launch { preferencesRepository.setLlmEnabled(on) } }
+                )
+            )
+        )
+    )
+
+    if (enabled) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Surface2,
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Runs against your local LM Studio server. On the emulator use " +
+                            "http://10.0.2.2:1234; on a device use your computer's LAN IP, or " +
+                            "run \"adb reverse tcp:1234 tcp:1234\" and use http://localhost:1234.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    val fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Surface4,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = TextSecondary,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    )
+
+                    OutlinedTextField(
+                        value = baseUrl ?: "",
+                        onValueChange = { value ->
+                            baseUrl = value
+                            scope.launch { preferencesRepository.setLlmBaseUrl(value) }
+                        },
+                        label = { Text("Server URL") },
+                        singleLine = true,
+                        colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = model ?: "",
+                        onValueChange = { value ->
+                            model = value
+                            scope.launch { preferencesRepository.setLlmModel(value) }
+                        },
+                        label = { Text("Model") },
+                        singleLine = true,
+                        colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            testing = true
+                            testStatus = null
+                            scope.launch {
+                                val result = context.appContainer.bookCompanionRepository.listModels()
+                                testing = false
+                                result.fold(
+                                    onSuccess = { models ->
+                                        testSuccess = true
+                                        testStatus = if (models.isEmpty()) {
+                                            "Connected, but no model is loaded in LM Studio."
+                                        } else {
+                                            "Connected ✓  (${models.size} available: ${models.take(3).joinToString()})"
+                                        }
+                                    },
+                                    onFailure = { e ->
+                                        testSuccess = false
+                                        testStatus = "Couldn't connect: ${e.message ?: "server unreachable"}"
+                                    }
+                                )
+                            }
+                        },
+                        enabled = !testing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (testing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Testing…")
+                        } else {
+                            Icon(
+                                imageVector = Icons.Outlined.WifiTethering,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Test connection")
+                        }
+                    }
+
+                    testStatus?.let { status ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = status,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (testSuccess) MaterialTheme.colorScheme.primary else ErrorRed
+                        )
+                    }
+                }
+            }
         }
     }
 }

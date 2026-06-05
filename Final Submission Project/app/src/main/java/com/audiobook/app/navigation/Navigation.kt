@@ -40,6 +40,9 @@ sealed class Screen(val route: String) {
     object Player : Screen("player/{bookId}") {
         fun createRoute(bookId: String) = "player/$bookId"
     }
+    object BookCompanion : Screen("book_companion/{bookId}") {
+        fun createRoute(bookId: String) = "book_companion/$bookId"
+    }
     object Profile : Screen("profile")
     object Settings : Screen("settings")
 }
@@ -190,11 +193,30 @@ fun AppNavigation(
                         navController.navigate(Screen.Player.createRoute(bookId)) {
                             launchSingleTop = true
                         }
+                    },
+                    onAskAiClick = {
+                        navController.navigate(Screen.BookCompanion.createRoute(bookId)) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
         }
-        
+
+        composable(Screen.BookCompanion.route) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
+            var book by remember { mutableStateOf<com.audiobook.app.data.model.Audiobook?>(null) }
+            LaunchedEffect(bookId) {
+                book = context.appContainer.audiobookRepository.getAudiobook(bookId)
+            }
+            book?.let {
+                BookCompanionScreen(
+                    book = it,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+        }
+
         composable(Screen.Player.route) { backStackEntry ->
             val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
             PlayerScreen(

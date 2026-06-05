@@ -8,10 +8,13 @@ import com.audiobook.app.data.local.AudiobookDatabase
 import com.audiobook.app.data.parser.ChapterParser
 import com.audiobook.app.data.remote.ApiClient
 import com.audiobook.app.data.remote.BookMetadataRepository
+import com.audiobook.app.data.remote.llm.LlmProvider
+import com.audiobook.app.data.remote.llm.LmStudioProvider
 import com.audiobook.app.data.parser.M2BExporter
 import com.audiobook.app.data.parser.M2BImporter
 import com.audiobook.app.data.repository.AudiobookRepository
 import com.audiobook.app.data.repository.AuthRepository
+import com.audiobook.app.data.repository.BookCompanionRepository
 import com.audiobook.app.data.repository.M2BRepository
 import com.audiobook.app.data.repository.NotificationRepository
 import com.audiobook.app.data.repository.PreferencesRepository
@@ -19,6 +22,7 @@ import com.audiobook.app.data.repository.ProgressSyncRepository
 import com.audiobook.app.service.AudiobookPlayer
 import com.audiobook.app.service.NotificationScheduler
 import com.audiobook.app.service.NotificationTriggerHelper
+import kotlinx.coroutines.flow.first
 
 /**
  * Manual Dependency Injection Container
@@ -136,6 +140,28 @@ class AppContainer(private val context: Context) {
         )
     }
     
+    // Book Companion (local LLM)
+
+    /**
+     * LLM Provider - backs the Book Companion chat. Bound to LM Studio's
+     * OpenAI-compatible local server. Reads its base URL / model fresh from
+     * preferences on each call, so Settings changes take effect immediately.
+     *
+     * Typed as the [LlmProvider] interface: callers never see the concrete
+     * implementation, so the backend (cloud, on-device, …) is swappable.
+     */
+    val llmProvider: LlmProvider by lazy {
+        LmStudioProvider(configProvider = { preferencesRepository.llmConfig.first() })
+    }
+
+    /**
+     * Book Companion Repository - builds grounded prompts from a book's
+     * metadata and delegates to the [llmProvider].
+     */
+    val bookCompanionRepository: BookCompanionRepository by lazy {
+        BookCompanionRepository(llmProvider)
+    }
+
     /**
      * Notification Repository - manages FCM tokens and notification preferences.
      * Handles push notifications and local notification scheduling.

@@ -2,8 +2,10 @@ package com.audiobook.app.data.repository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
+import com.audiobook.app.data.remote.llm.LlmConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
@@ -25,6 +27,10 @@ class PreferencesRepository(
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         val SLEEP_TIMER_MINUTES = intPreferencesKey("sleep_timer_minutes")
         val AUDIOBOOK_FOLDER_PATH = stringPreferencesKey("audiobook_folder_path")
+        val LLM_ENABLED = booleanPreferencesKey("llm_enabled")
+        val LLM_BASE_URL = stringPreferencesKey("llm_base_url")
+        val LLM_MODEL = stringPreferencesKey("llm_model")
+        val DISCLAIMER_ACCEPTED = booleanPreferencesKey("disclaimer_accepted")
     }
     
     /**
@@ -133,5 +139,54 @@ class PreferencesRepository(
     
     suspend fun setAudiobookFolderPath(path: String) {
         dataStore.edit { it[PreferenceKeys.AUDIOBOOK_FOLDER_PATH] = path }
+    }
+
+    // ──────────────────── Book Companion (local LLM) ────────────────────
+
+    /** Whether the AI Book Companion feature is enabled (default: off). */
+    val llmEnabled: Flow<Boolean> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[PreferenceKeys.LLM_ENABLED] ?: false }
+
+    suspend fun setLlmEnabled(enabled: Boolean) {
+        dataStore.edit { it[PreferenceKeys.LLM_ENABLED] = enabled }
+    }
+
+    /** Base URL of the LM Studio (OpenAI-compatible) server. */
+    val llmBaseUrl: Flow<String> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[PreferenceKeys.LLM_BASE_URL] ?: LlmConfig.DEFAULT_BASE_URL }
+
+    suspend fun setLlmBaseUrl(url: String) {
+        dataStore.edit { it[PreferenceKeys.LLM_BASE_URL] = url }
+    }
+
+    /** Model identifier to request from the server. */
+    val llmModel: Flow<String> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[PreferenceKeys.LLM_MODEL] ?: LlmConfig.DEFAULT_MODEL }
+
+    suspend fun setLlmModel(model: String) {
+        dataStore.edit { it[PreferenceKeys.LLM_MODEL] = model }
+    }
+
+    // ──────────────────── First-run legal disclaimer ────────────────────
+
+    /** Whether the user has accepted the first-run Terms & Disclaimer. */
+    val disclaimerAccepted: Flow<Boolean> = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { it[PreferenceKeys.DISCLAIMER_ACCEPTED] ?: false }
+
+    suspend fun setDisclaimerAccepted(accepted: Boolean) {
+        dataStore.edit { it[PreferenceKeys.DISCLAIMER_ACCEPTED] = accepted }
+    }
+
+    /** Combined, reactive view of the LLM configuration. */
+    val llmConfig: Flow<LlmConfig> = combine(
+        llmBaseUrl,
+        llmModel,
+        llmEnabled
+    ) { baseUrl, model, enabled ->
+        LlmConfig(baseUrl = baseUrl, model = model, enabled = enabled)
     }
 }

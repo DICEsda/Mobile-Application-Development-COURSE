@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.audiobook.app.appContainer
 import com.audiobook.app.data.model.Audiobook
 import com.audiobook.app.data.model.Chapter
 import com.audiobook.app.ui.theme.*
@@ -48,10 +50,12 @@ fun BookDetailScreen(
     currentPositionMs: Long = 0,
     onBackClick: () -> Unit,
     onPlayClick: () -> Unit,
-    onChapterClick: (Chapter) -> Unit
+    onChapterClick: (Chapter) -> Unit,
+    onAskAiClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var isDescriptionExpanded by remember { mutableStateOf(false) }
+    val aiEnabled by context.appContainer.preferencesRepository.llmEnabled.collectAsState(initial = false)
 
     Scaffold(
         containerColor = Background,
@@ -71,6 +75,17 @@ fun BookDetailScreen(
                             contentDescription = "Back",
                             tint = TextPrimary
                         )
+                    }
+                },
+                actions = {
+                    if (aiEnabled) {
+                        IconButton(onClick = onAskAiClick) {
+                            Icon(
+                                imageVector = Icons.Outlined.AutoAwesome,
+                                contentDescription = "Ask the Book Companion",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

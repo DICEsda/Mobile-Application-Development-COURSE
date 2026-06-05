@@ -12,7 +12,9 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.compose.rememberNavController
@@ -27,6 +30,7 @@ import com.audiobook.app.navigation.AppNavigation
 import com.audiobook.app.navigation.Screen
 import com.audiobook.app.ui.theme.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : FragmentActivity() {
@@ -44,18 +48,32 @@ class MainActivity : FragmentActivity() {
         val biometricEnabled = runBlocking {
             appContainer.preferencesRepository.rememberBiometric.first()
         }
+        val disclaimerAlreadyAccepted = runBlocking {
+            appContainer.preferencesRepository.disclaimerAccepted.first()
+        }
 
         setContent {
             PremiumAudiobookAppTheme {
+                val scope = rememberCoroutineScope()
                 var isAuthenticated by remember { mutableStateOf(!biometricEnabled) }
                 var permissionsGranted by remember { mutableStateOf(hasRequiredPermissions()) }
+                var disclaimerAccepted by remember { mutableStateOf(disclaimerAlreadyAccepted) }
                 val navController = rememberNavController()
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Background
                 ) {
-                    if (!permissionsGranted) {
+                    if (!disclaimerAccepted) {
+                        DisclaimerDialog(
+                            onAccept = {
+                                scope.launch {
+                                    appContainer.preferencesRepository.setDisclaimerAccepted(true)
+                                }
+                                disclaimerAccepted = true
+                            }
+                        )
+                    } else if (!permissionsGranted) {
                         PermissionRequestScreen(
                             onPermissionsGranted = { permissionsGranted = true }
                         )
@@ -146,6 +164,79 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+}
+
+/**
+ * One-time, non-dismissable Terms & Disclaimer modal shown on first launch.
+ * The user must explicitly agree before they can use the app; acceptance is
+ * persisted so it is not shown again.
+ */
+@Composable
+private fun DisclaimerDialog(onAccept: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { /* Non-dismissable: agreement is required. */ },
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        ),
+        containerColor = Surface2,
+        title = {
+            Text(
+                text = "Terms of Use & Disclaimer",
+                style = MaterialTheme.typography.titleLarge,
+                color = TextPrimary
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "This application is a personal audiobook player. It plays only the " +
+                        "audio files that you choose to add from your own device or storage.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+                Text(
+                    text = "The developer does not host, supply, distribute, or control any audio " +
+                        "content, and accepts no responsibility or liability for the material you " +
+                        "import, play, or manage within the app. You are solely responsible for the " +
+                        "content you add and for ensuring you hold the necessary rights to access and " +
+                        "play it, in compliance with applicable copyright laws and any third-party terms.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+                Text(
+                    text = "Any AI-generated responses are provided for convenience only, may be " +
+                        "inaccurate or incomplete, and should not be relied upon as professional advice.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+                Text(
+                    text = "The app is provided \"as is\", without warranties of any kind. By selecting " +
+                        "\"I Understand and Agree\", you acknowledge and accept these terms.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onAccept,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "I Understand and Agree",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary
+                )
+            }
+        }
+    )
 }
 
 @Composable
