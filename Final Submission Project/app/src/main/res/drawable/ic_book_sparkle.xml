@@ -1,0 +1,42 @@
+<!--
+  Book Companion icon: an outlined open book with the AutoAwesome-style
+  4-point sparkle in the top-right corner. Single-color so Icon(tint = …)
+  recolors the whole glyph.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Left page -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,7 C9.2,5.5 6.3,5.2 3.8,6.1 L3.8,17.1 C6.3,16.2 9.2,16.5 12,18" />
+
+    <!-- Right page -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,7 C14.8,5.5 17.7,5.2 20.2,6.1 L20.2,17.1 C17.7,16.2 14.8,16.5 12,18" />
+
+    <!-- Spine -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:pathData="M12,7 L12,18" />
+
+    <!-- Sparkle (4-point star), top-right -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19.4,1.6 L20.1,3.5 L22.0,4.2 L20.1,4.9 L19.4,6.8 L18.7,4.9 L16.8,4.2 L18.7,3.5 Z" />
+</vector>

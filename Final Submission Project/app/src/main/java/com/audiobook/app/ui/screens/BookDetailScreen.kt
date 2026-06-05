@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,13 +26,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.audiobook.app.R
 import com.audiobook.app.appContainer
 import com.audiobook.app.data.model.Audiobook
 import com.audiobook.app.data.model.Chapter
@@ -81,7 +83,7 @@ fun BookDetailScreen(
                     if (aiEnabled) {
                         IconButton(onClick = onAskAiClick) {
                             Icon(
-                                imageVector = Icons.Outlined.AutoAwesome,
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_book_sparkle),
                                 contentDescription = "Ask the Book Companion",
                                 tint = MaterialTheme.colorScheme.primary
                             )

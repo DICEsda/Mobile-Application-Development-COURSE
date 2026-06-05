@@ -25,6 +25,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.vectorResource
+import com.audiobook.app.R
 import com.audiobook.app.appContainer
 import com.audiobook.app.data.remote.llm.LlmConfig
 import com.audiobook.app.data.repository.NotificationRepository
@@ -641,11 +643,13 @@ internal fun BookCompanionSettingsSection() {
     var testStatus by remember { mutableStateOf<String?>(null) }
     var testSuccess by remember { mutableStateOf(false) }
 
+    val bookSparkle = ImageVector.vectorResource(R.drawable.ic_book_sparkle)
+
     SettingsSection(
         title = "Book Companion (AI)",
         items = listOf(
             SettingItemData(
-                icon = Icons.Outlined.AutoAwesome,
+                icon = bookSparkle,
                 label = "Enable AI Companion",
                 type = SettingType.Toggle(
                     value = enabled,
