@@ -130,7 +130,7 @@ fun LibraryLockedScreen(
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    AccentTeal.copy(alpha = glowAlpha),
+                                    AccentOrange.copy(alpha = glowAlpha),
                                     Color.Transparent
                                 )
                             )
@@ -160,7 +160,7 @@ fun LibraryLockedScreen(
                             .background(
                                 brush = Brush.linearGradient(
                                     colors = listOf(
-                                        AccentTeal.copy(alpha = 0.1f),
+                                        AccentOrange.copy(alpha = 0.1f),
                                         Color.Transparent
                                     )
                                 )
@@ -169,7 +169,7 @@ fun LibraryLockedScreen(
                     Icon(
                         imageVector = Icons.Outlined.Fingerprint,
                         contentDescription = "Unlock with fingerprint",
-                        tint = AccentTeal,
+                        tint = AccentOrange,
                         modifier = Modifier.size(64.dp)
                     )
                 }

@@ -235,7 +235,7 @@ fun LibraryScreen(
                             if (isLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
-                                    color = AccentTeal,
+                                    color = AccentOrange,
                                     strokeWidth = 2.dp
                                 )
                             }
@@ -311,9 +311,9 @@ fun LibraryScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Surface2,
                             unfocusedContainerColor = Surface2,
-                            focusedBorderColor = AccentTeal.copy(alpha = 0.5f),
+                            focusedBorderColor = AccentOrange.copy(alpha = 0.5f),
                             unfocusedBorderColor = Color.Transparent,
-                            cursorColor = AccentTeal,
+                            cursorColor = AccentOrange,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         ),
@@ -371,7 +371,7 @@ fun LibraryScreen(
                                     Button(
                                         onClick = onSignInClick,
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = AccentTeal
+                                            containerColor = AccentOrange
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
@@ -379,10 +379,10 @@ fun LibraryScreen(
                                     }
                                     OutlinedButton(
                                         onClick = onSignUpClick,
-                                        border = BorderStroke(1.dp, AccentTeal),
+                                        border = BorderStroke(1.dp, AccentOrange),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("Sign Up", color = AccentTeal)
+                                        Text("Sign Up", color = AccentOrange)
                                     }
                                 }
                             }
@@ -459,7 +459,7 @@ fun LibraryScreen(
                                     Text(
                                         text = "/storage/emulated/0/Audiobooks/",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = AccentTeal.copy(alpha = 0.7f)
+                                        color = AccentOrange.copy(alpha = 0.7f)
                                     )
                                 }
                             }
@@ -505,7 +505,7 @@ fun LibraryScreen(
                         .padding(16.dp),
                     action = {
                         TextButton(onClick = { viewModel.clearError() }) {
-                            Text("Dismiss", color = AccentTeal)
+                            Text("Dismiss", color = AccentOrange)
                         }
                     },
                     containerColor = Surface2,
@@ -665,7 +665,7 @@ private fun BookDetailPopup(
                     Text(
                         text = if (isDescriptionExpanded) "Read less" else "Read more",
                         style = MaterialTheme.typography.labelSmall,
-                        color = AccentTeal,
+                        color = AccentOrange,
                         modifier = Modifier.clickable { isDescriptionExpanded = !isDescriptionExpanded }
                     )
                 }
@@ -696,7 +696,7 @@ private fun BookDetailPopup(
                     Text(
                         text = "${(audiobook.progress * 100).toInt()}%",
                         style = MaterialTheme.typography.titleSmall,
-                        color = AccentTeal
+                        color = AccentOrange
                     )
                 }
                 
@@ -734,8 +734,8 @@ private fun BookDetailPopup(
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(1.dp, AccentTeal.copy(alpha = 0.5f)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentTeal)
+            border = BorderStroke(1.dp, AccentOrange.copy(alpha = 0.5f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentOrange)
         ) {
             Icon(
                 imageVector = Icons.Outlined.Info,
@@ -746,7 +746,7 @@ private fun BookDetailPopup(
             Text(
                 text = "View Details",
                 style = MaterialTheme.typography.titleSmall,
-                color = AccentTeal
+                color = AccentOrange
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -759,7 +759,7 @@ private fun BookDetailPopup(
                 .height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AccentTeal
+                containerColor = AccentOrange
             )
         ) {
             Icon(
@@ -845,7 +845,7 @@ private fun ContinueReadingCard(
                     Text(
                         text = timeRemaining,
                         style = MaterialTheme.typography.labelSmall,
-                        color = AccentTeal
+                        color = AccentOrange
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -872,7 +872,7 @@ private fun ContinueReadingCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(AccentTeal)
+                    .background(AccentOrange)
                     .clickable(onClick = onPlayClick),
                 contentAlignment = Alignment.Center
             ) {
@@ -929,7 +929,7 @@ private fun AudiobookGridItem(
                         modifier = Modifier
                             .fillMaxWidth(book.progress)
                             .fillMaxHeight()
-                            .background(AccentTeal)
+                            .background(AccentOrange)
                     )
                 }
             }
@@ -1000,7 +1000,7 @@ private fun AudiobookGridItem(
                     Text(
                         text = "${(book.progress * 100).toInt()}%",
                         style = MaterialTheme.typography.labelSmall,
-                        color = AccentTeal,
+                        color = AccentOrange,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                     )
                 }
@@ -1036,8 +1036,8 @@ private fun AudiobookGridItem(
                                 .background(
                                     brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
                                         colors = listOf(
-                                            AccentTeal,
-                                            AccentTeal.copy(alpha = 0.7f)
+                                            AccentOrange,
+                                            AccentOrange.copy(alpha = 0.7f)
                                         )
                                     )
                                 )

@@ -226,7 +226,7 @@ private fun DisclaimerDialog(onAccept: () -> Unit) {
         confirmButton = {
             Button(
                 onClick = onAccept,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
@@ -302,7 +302,7 @@ private fun PermissionRequestScreen(onPermissionsGranted: () -> Unit) {
 
             Button(
                 onClick = { launcher.launch(permissions) },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()

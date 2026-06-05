@@ -98,7 +98,7 @@ fun PlayerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                CircularProgressIndicator(color = AccentTeal)
+                CircularProgressIndicator(color = AccentOrange)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Loading audiobook...",
@@ -220,7 +220,7 @@ fun PlayerScreen(
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        AccentTeal.copy(alpha = 0.2f),
+                                        AccentOrange.copy(alpha = 0.2f),
                                         Color.Transparent
                                     )
                                 )
@@ -267,7 +267,7 @@ fun PlayerScreen(
                         Text(
                             text = currentChapterTitle ?: "",
                             style = MaterialTheme.typography.labelMedium,
-                            color = AccentTeal,
+                            color = AccentOrange,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
                     }
@@ -328,7 +328,7 @@ fun PlayerScreen(
                             Text(
                                 text = "${playbackSpeed}x",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = AccentTeal
+                                color = AccentOrange
                             )
                         }
                     }
@@ -384,14 +384,14 @@ fun PlayerScreen(
                             Icon(
                                 imageVector = Icons.Outlined.Bedtime,
                                 contentDescription = "Sleep Timer",
-                                tint = if (sleepTimerMinutes != null) AccentTeal else TextTertiary,
+                                tint = if (sleepTimerMinutes != null) AccentOrange else TextTertiary,
                                 modifier = Modifier.size(20.dp)
                             )
                             if (sleepTimerMinutes != null) {
                                 Text(
                                     text = if (sleepTimerMinutes == -1) "Ch" else "${sleepTimerMinutes}m",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = AccentTeal
+                                    color = AccentOrange
                                 )
                             }
                         }
@@ -597,8 +597,8 @@ private fun SeekableProgressBar(
         },
         modifier = modifier.height(24.dp),
         colors = SliderDefaults.colors(
-            thumbColor = AccentTeal,
-            activeTrackColor = AccentTeal,
+            thumbColor = AccentOrange,
+            activeTrackColor = AccentOrange,
             inactiveTrackColor = Surface4
         )
     )
@@ -622,7 +622,7 @@ private fun PlayPauseButton(
         modifier = Modifier
             .size(80.dp)
             .clip(CircleShape)
-            .background(AccentTeal)
+            .background(AccentOrange)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -720,7 +720,7 @@ private fun ChapterItem(
     val playingGradient = remember {
         Brush.horizontalGradient(
             colors = listOf(
-                AccentTeal.copy(alpha = 0.1f),
+                AccentOrange.copy(alpha = 0.1f),
                 Color.Transparent
             )
         )
@@ -749,7 +749,7 @@ private fun ChapterItem(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(if (chapter.isPlaying) AccentTeal else Surface4),
+                        .background(if (chapter.isPlaying) AccentOrange else Surface4),
                     contentAlignment = Alignment.Center
                 ) {
                     if (chapter.isPlaying) {
@@ -843,21 +843,21 @@ private fun ChapterItem(
                                 .width(3.dp)
                                 .fillMaxHeight(pulseHeight1 * 0.6f)
                                 .clip(RoundedCornerShape(1.5.dp))
-                                .background(AccentTeal)
+                                .background(AccentOrange)
                         )
                         Box(
                             modifier = Modifier
                                 .width(3.dp)
                                 .fillMaxHeight(pulseHeight2)
                                 .clip(RoundedCornerShape(1.5.dp))
-                                .background(AccentTeal)
+                                .background(AccentOrange)
                         )
                         Box(
                             modifier = Modifier
                                 .width(3.dp)
                                 .fillMaxHeight(pulseHeight1 * 0.8f)
                                 .clip(RoundedCornerShape(1.5.dp))
-                                .background(AccentTeal)
+                                .background(AccentOrange)
                         )
                     }
                 }
@@ -898,9 +898,9 @@ private fun RenameChapterDialog(
                 label = { Text("Chapter title") },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentTeal,
-                    focusedLabelColor = AccentTeal,
-                    cursorColor = AccentTeal,
+                    focusedBorderColor = AccentOrange,
+                    focusedLabelColor = AccentOrange,
+                    cursorColor = AccentOrange,
                     unfocusedBorderColor = Surface4,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary
@@ -916,7 +916,7 @@ private fun RenameChapterDialog(
                 },
                 enabled = text.trim().isNotEmpty() && text.trim() != currentTitle
             ) {
-                Text("Save", color = if (text.trim().isNotEmpty() && text.trim() != currentTitle) AccentTeal else TextTertiary)
+                Text("Save", color = if (text.trim().isNotEmpty() && text.trim() != currentTitle) AccentOrange else TextTertiary)
             }
         },
         dismissButton = {
@@ -973,7 +973,7 @@ private fun SpeedSheet(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (isSelected) AccentTeal else Surface2)
+                                .background(if (isSelected) AccentOrange else Surface2)
                                 .clickable { onSpeedSelected(speed) }
                                 .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center
@@ -1037,7 +1037,7 @@ private fun SleepTimerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(if (currentTimer == null) AccentTeal else Surface2)
+                    .background(if (currentTimer == null) AccentOrange else Surface2)
                     .clickable { onTimerSelected(0) }
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
@@ -1061,7 +1061,7 @@ private fun SleepTimerSheet(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (isSelected) AccentTeal else Surface2)
+                                .background(if (isSelected) AccentOrange else Surface2)
                                 .clickable { onTimerSelected(value) }
                                 .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center
