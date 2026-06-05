@@ -54,6 +54,15 @@ android {
         baseline = file("lint-baseline.xml")
         disable += setOf("MissingTranslation")
     }
+
+    testOptions {
+        unitTests {
+            // Let android.util.* stubs (e.g. Log) return defaults instead of
+            // throwing in JVM unit tests, so pure-logic classes that touch them
+            // (CueParser, parsers) can be tested without Robolectric.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
