@@ -348,6 +348,11 @@ fun ProfileScreen(
                 )
             }
 
+            // Book Companion (AI) section
+            item {
+                BookCompanionSettingsSection()
+            }
+
             // Notification testing
             item {
                 NotificationTestingSection(notificationScheduler = notificationScheduler)
