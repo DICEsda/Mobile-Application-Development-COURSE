@@ -1,5 +1,7 @@
 package com.audiobook.app.data.remote.llm
 
+import kotlinx.coroutines.flow.Flow
+
 /**
  * The seam between the app and whatever Large Language Model backs the
  * "Book Companion" feature.
@@ -25,6 +27,13 @@ interface LlmProvider {
      * @param temperature sampling temperature (0.0 = deterministic).
      */
     suspend fun chat(messages: List<ChatMessage>, temperature: Float = 0.7f): Result<String>
+
+    /**
+     * Stream the assistant's reply as a sequence of incremental text deltas
+     * (server-sent events). The flow completes when generation finishes and
+     * throws if the server is unreachable. Used for the live, fading-in chat UI.
+     */
+    fun chatStream(messages: List<ChatMessage>, temperature: Float = 0.7f): Flow<String>
 
     /**
      * List the model ids the server currently has available. Used by Settings

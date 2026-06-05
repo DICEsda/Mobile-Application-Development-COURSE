@@ -52,3 +52,19 @@ data class ModelsResponse(
 data class ModelInfo(
     val id: String = ""
 )
+
+// Streaming (SSE) chunk shape: {"choices":[{"delta":{"content":"..."}}]}
+
+data class ChatStreamChunk(
+    val choices: List<StreamChoice> = emptyList()
+)
+
+data class StreamChoice(
+    val delta: Delta? = null,
+    @SerializedName("finish_reason") val finishReason: String? = null
+)
+
+data class Delta(
+    val role: String? = null,
+    val content: String? = null
+)

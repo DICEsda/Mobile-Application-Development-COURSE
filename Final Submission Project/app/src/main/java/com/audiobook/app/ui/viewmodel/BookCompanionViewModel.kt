@@ -47,7 +47,7 @@ class BookCompanionViewModel(
         )
     }
 
-    /** Send a user question and append the assistant's reply. */
+    /** Send a user question and stream the assistant's reply token-by-token. */
     fun send(question: String) {
         val text = question.trim()
         val book = _uiState.value.book ?: return
@@ -56,31 +56,33 @@ class BookCompanionViewModel(
         // History sent to the repository excludes the message we're adding now.
         val history = _uiState.value.messages
 
+        // Append the user turn plus an empty assistant turn we'll stream into.
         _uiState.update {
             it.copy(
-                messages = it.messages + ChatMessage.user(text),
+                messages = it.messages + ChatMessage.user(text) + ChatMessage.assistant(""),
                 isLoading = true,
                 error = null
             )
         }
 
         viewModelScope.launch {
-            val result = repository.ask(book, history, text)
-            _uiState.update { state ->
-                result.fold(
-                    onSuccess = { reply ->
-                        state.copy(
-                            messages = state.messages + ChatMessage.assistant(reply),
-                            isLoading = false
-                        )
-                    },
-                    onFailure = { e ->
-                        state.copy(
-                            isLoading = false,
-                            error = friendlyError(e)
-                        )
+            val builder = StringBuilder()
+            try {
+                repository.askStream(book, history, text).collect { delta ->
+                    builder.append(delta)
+                    _uiState.update { state ->
+                        val messages = state.messages.toMutableList()
+                        messages[messages.lastIndex] = ChatMessage.assistant(builder.toString())
+                        state.copy(messages = messages)
                     }
-                )
+                }
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                _uiState.update { state ->
+                    // Drop the empty assistant placeholder if nothing streamed in.
+                    val messages = if (builder.isEmpty()) state.messages.dropLast(1) else state.messages
+                    state.copy(messages = messages, isLoading = false, error = friendlyError(e))
+                }
             }
         }
     }

@@ -120,7 +120,7 @@ private fun NavBarItem(
             Icon(
                 imageVector = if (item == NavItem.Player && isSelected) Icons.Filled.PlayArrow else item.icon,
                 contentDescription = item.label,
-                tint = if (isSelected) AccentOrange else TextTertiary,
+                tint = if (isSelected) AccentTeal else TextTertiary,
                 modifier = Modifier.size(28.dp)
             )
             if (hasIndicator) {
@@ -130,7 +130,7 @@ private fun NavBarItem(
                         .offset(x = 4.dp, y = (-4).dp)
                         .size(8.dp)
                         .background(
-                            color = AccentOrange.copy(alpha = pulseAlpha),
+                            color = AccentTeal.copy(alpha = pulseAlpha),
                             shape = CircleShape
                         )
                 )
@@ -139,7 +139,7 @@ private fun NavBarItem(
         Text(
             text = item.label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (isSelected) AccentOrange else TextTertiary,
+            color = if (isSelected) AccentTeal else TextTertiary,
             fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal
         )
     }
@@ -164,7 +164,7 @@ fun PrimaryButton(
         modifier = modifier,
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
-            containerColor = AccentOrange,
+            containerColor = AccentTeal,
             contentColor = TextPrimary
         ),
         shape = RoundedCornerShape(16.dp),
@@ -207,7 +207,7 @@ fun PlayButton(
         modifier = modifier
             .size(size.dp)
             .clip(CircleShape)
-            .background(AccentOrange)
+            .background(AccentTeal)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -237,7 +237,7 @@ fun ProgressBar(
                 .fillMaxWidth(progress)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(2.dp))
-                .background(AccentOrange)
+                .background(AccentTeal)
         )
     }
 }
@@ -259,7 +259,7 @@ fun ToggleSwitch(
             .width(48.dp)
             .height(28.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (checked) AccentOrange else Surface4)
+            .background(if (checked) AccentTeal else Surface4)
             .clickable { onCheckedChange(!checked) }
     ) {
         Box(

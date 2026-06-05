@@ -1,10 +1,17 @@
 package com.audiobook.app.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -17,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
@@ -124,12 +132,15 @@ fun BookCompanionScreen(
                 }
             }
 
-            items(state.messages) { message ->
-                MessageBubble(message)
-            }
-
-            if (state.isLoading) {
-                item { TypingBubble() }
+            itemsIndexed(state.messages) { index, message ->
+                val isLast = index == state.messages.lastIndex
+                val isStreamingThis = isLast && state.isLoading && message.role == ChatRole.ASSISTANT
+                if (message.role == ChatRole.ASSISTANT && message.content.isEmpty() && isStreamingThis) {
+                    // Waiting on the first token.
+                    TypingIndicator()
+                } else {
+                    MessageBubble(message = message, isStreaming = isStreamingThis)
+                }
             }
 
             state.error?.let { error ->
@@ -191,46 +202,85 @@ private fun EmptyState(
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessage) {
-    val isUser = message.role == ChatRole.USER
-    val bubbleColor = if (isUser) MaterialTheme.colorScheme.primary else Surface2
-    val textColor = if (isUser) TextPrimary else TextPrimary
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-    ) {
-        Surface(
-            color = bubbleColor,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth(0.85f).wrapContentWidth(if (isUser) Alignment.End else Alignment.Start)
+private fun MessageBubble(message: ChatMessage, isStreaming: Boolean) {
+    if (message.role == ChatRole.USER) {
+        // User turns stay in a compact teal bubble, right-aligned.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
         ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .wrapContentWidth(Alignment.End)
+            ) {
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                )
+            }
+        }
+    } else {
+        // Assistant turns are free in the shell — no card — and fade in.
+        AssistantMessage(text = message.content, isStreaming = isStreaming)
+    }
+}
+
+/**
+ * Assistant reply rendered directly on the background (no bubble). Fades in
+ * when it first appears and shows a blinking caret while still streaming.
+ */
+@Composable
+private fun AssistantMessage(text: String, isStreaming: Boolean) {
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val fade by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(durationMillis = 450),
+        label = "assistantFade"
+    )
+
+    val caret by rememberInfiniteTransition(label = "caret").animateFloat(
+        initialValue = 1f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(650, easing = LinearEasing), RepeatMode.Reverse),
+        label = "caretAlpha"
+    )
+
+    Row(modifier = Modifier.fillMaxWidth().alpha(fade)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = TextPrimary
+        )
+        if (isStreaming) {
             Text(
-                text = message.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = textColor,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                text = "▍",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.alpha(caret)
             )
         }
     }
 }
 
 @Composable
-private fun TypingBubble() {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Surface(color = Surface2, shape = RoundedCornerShape(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                    color = TextSecondary
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Thinking…", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            }
-        }
+private fun TypingIndicator() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(16.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(10.dp))
+        Text("Thinking…", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
     }
 }
 

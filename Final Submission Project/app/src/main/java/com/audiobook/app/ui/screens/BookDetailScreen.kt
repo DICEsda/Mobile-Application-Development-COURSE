@@ -107,7 +107,7 @@ fun BookDetailScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentOrange
+                        containerColor = AccentTeal
                     )
                 ) {
                     Icon(
@@ -356,7 +356,7 @@ private fun DescriptionSection(
             Text(
                 text = if (isExpanded) "Read less" else "Read more",
                 style = MaterialTheme.typography.labelSmall,
-                color = AccentOrange,
+                color = AccentTeal,
                 modifier = Modifier.clickable(onClick = onToggle)
             )
         }
@@ -422,7 +422,7 @@ private fun ChapterRow(
                     .background(
                         when {
                             isCompleted -> SuccessGreen
-                            isCurrent -> AccentOrange
+                            isCurrent -> AccentTeal
                             else -> Surface3
                         }
                     ),
@@ -500,7 +500,7 @@ private fun ChapterRow(
                     .background(
                         when {
                             isCompleted -> SuccessGreen
-                            isCurrent -> AccentOrange
+                            isCurrent -> AccentTeal
                             else -> Color.Transparent
                         }
                     )

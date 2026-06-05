@@ -11,15 +11,15 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AccentOrange,
+    primary = AccentTeal,
     onPrimary = TextPrimary,
     primaryContainer = AccentOverlay10,
-    onPrimaryContainer = AccentOrange,
+    onPrimaryContainer = AccentTeal,
     secondary = Surface2,
     onSecondary = TextPrimary,
     secondaryContainer = Surface3,
     onSecondaryContainer = TextSecondary,
-    tertiary = AccentOrangeLight,
+    tertiary = AccentTealLight,
     onTertiary = Background,
     background = Background,
     onBackground = TextPrimary,

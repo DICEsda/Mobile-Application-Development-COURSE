@@ -3,6 +3,7 @@ package com.audiobook.app.data.repository
 import com.audiobook.app.data.model.Audiobook
 import com.audiobook.app.data.remote.llm.ChatMessage
 import com.audiobook.app.data.remote.llm.LlmProvider
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Drives the "Book Companion" chat: turns an [Audiobook] plus a conversation
@@ -32,6 +33,16 @@ class BookCompanionRepository(
     ): Result<String> {
         return provider.chat(buildWireMessages(book, history, question))
     }
+
+    /**
+     * Like [ask], but streams the reply as incremental text deltas for a
+     * live, fading-in chat experience.
+     */
+    fun askStream(
+        book: Audiobook,
+        history: List<ChatMessage>,
+        question: String
+    ): Flow<String> = provider.chatStream(buildWireMessages(book, history, question))
 
     /** Verify the configured model server is reachable (for Settings). */
     suspend fun listModels(): Result<List<String>> = provider.listModels()

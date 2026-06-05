@@ -208,7 +208,7 @@ fun ProfileScreen(
                         Icon(
                             imageVector = Icons.Outlined.Person,
                             contentDescription = "Profile",
-                            tint = AccentOrange,
+                            tint = AccentTeal,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -447,7 +447,7 @@ private fun StatCard(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = AccentOrange,
+            tint = AccentTeal,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))

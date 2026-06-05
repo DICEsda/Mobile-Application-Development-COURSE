@@ -1,7 +1,15 @@
 package com.audiobook.app.data.remote.llm
 
 import android.util.Log
+import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -19,6 +27,8 @@ class LmStudioProvider(
 ) : LlmProvider {
 
     override val displayName: String = "LM Studio (local)"
+
+    private val gson = Gson()
 
     // Local models can take a while to generate; keep read timeout generous.
     private val okHttpClient: OkHttpClient by lazy {
@@ -71,6 +81,40 @@ class LmStudioProvider(
         }
     }
 
+    override fun chatStream(messages: List<ChatMessage>, temperature: Float): Flow<String> = flow {
+        val config = configProvider()
+        val url = normalizeBaseUrl(config.baseUrl) + "v1/chat/completions"
+        val payload = gson.toJson(
+            ChatCompletionRequest(
+                model = config.model,
+                messages = messages.map { WireMessage(it.role.wireName, it.content) },
+                temperature = temperature,
+                stream = true
+            )
+        ).toRequestBody(JSON_MEDIA_TYPE)
+
+        val request = Request.Builder().url(url).post(payload).build()
+
+        okHttpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw LlmException("LM Studio returned HTTP ${response.code}")
+            }
+            val source = response.body?.source() ?: throw LlmException("Empty response body")
+            // Read the SSE stream line by line: "data: {json}" ... "data: [DONE]".
+            while (true) {
+                val line = source.readUtf8Line() ?: break
+                if (!line.startsWith("data:")) continue
+                val data = line.substringAfter("data:").trim()
+                if (data == "[DONE]") break
+                val delta = runCatching {
+                    gson.fromJson(data, ChatStreamChunk::class.java)
+                        ?.choices?.firstOrNull()?.delta?.content
+                }.getOrNull()
+                if (!delta.isNullOrEmpty()) emit(delta)
+            }
+        }
+    }.flowOn(Dispatchers.IO)
+
     override suspend fun listModels(): Result<List<String>> {
         val config = configProvider()
         return try {
@@ -84,6 +128,7 @@ class LmStudioProvider(
 
     companion object {
         private const val TAG = "LmStudioProvider"
+        private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
         /**
          * Retrofit requires an absolute base URL ending in '/'. Users may type

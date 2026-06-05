@@ -5,6 +5,8 @@ import com.audiobook.app.data.model.Chapter
 import com.audiobook.app.data.remote.llm.ChatMessage
 import com.audiobook.app.data.remote.llm.ChatRole
 import com.audiobook.app.data.remote.llm.LlmProvider
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,6 +27,10 @@ class BookCompanionRepositoryTest {
         override suspend fun chat(messages: List<ChatMessage>, temperature: Float): Result<String> {
             lastMessages = messages
             return Result.success("canned reply")
+        }
+        override fun chatStream(messages: List<ChatMessage>, temperature: Float): Flow<String> {
+            lastMessages = messages
+            return flowOf("canned ", "reply")
         }
         override suspend fun listModels(): Result<List<String>> = Result.success(listOf("fake-model"))
     }

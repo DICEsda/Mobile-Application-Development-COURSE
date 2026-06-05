@@ -2,9 +2,9 @@ package com.audiobook.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary accent color - Orange/Amber from the design
-val AccentOrange = Color(0xFFFF8B1A)
-val AccentOrangeLight = Color(0xFFFFAB4A)
+// Primary accent color - Teal
+val AccentTeal = Color(0xFF14B8A6)
+val AccentTealLight = Color(0xFF2DD4BF)
 
 // Dark theme colors
 val Background = Color(0xFF000000)
@@ -27,5 +27,5 @@ val SuccessGreen = Color(0xFF22C55E)
 val BlackOverlay60 = Color(0x99000000)
 val WhiteOverlay10 = Color(0x1AFFFFFF)
 val WhiteOverlay20 = Color(0x33FFFFFF)
-val AccentOverlay10 = Color(0x1AFF8B1A)
-val AccentOverlay30 = Color(0x4DFF8B1A)
+val AccentOverlay10 = Color(0x1A14B8A6)
+val AccentOverlay30 = Color(0x4D14B8A6)
