@@ -20,8 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.audiobook.app.appContainer
-import com.audiobook.app.data.model.UserProfile
-import com.audiobook.app.data.model.UserStats
 import com.audiobook.app.data.repository.NotificationRepository
 import com.audiobook.app.service.NotificationScheduler
 import com.audiobook.app.ui.components.BottomNavBar
@@ -29,12 +27,8 @@ import com.audiobook.app.ui.components.NavItem
 import com.audiobook.app.ui.components.NotificationPermissionCard
 import com.audiobook.app.ui.components.rememberNotificationPermissionState
 import com.audiobook.app.ui.theme.*
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,43 +45,6 @@ fun ProfileScreen(
     val preferencesRepository = context.appContainer.preferencesRepository
     val notificationRepository = remember { NotificationRepository(context) }
     val notificationScheduler = remember { NotificationScheduler(context) }
-
-    // Auth state
-    val authUser by context.appContainer.authRepository.authState.collectAsState(initial = null)
-    val isSignedIn = context.appContainer.authRepository.isSignedIn
-
-    // Fetch real stats from Firestore when signed in
-    var userStats by remember { mutableStateOf(UserStats(0, 0, 0)) }
-    LaunchedEffect(authUser?.uid) {
-        val uid = authUser?.uid
-        if (uid != null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val doc = FirebaseFirestore.getInstance()
-                        .collection("users").document(uid).get().await()
-                    userStats = UserStats(
-                        booksCompleted = doc.getLong("booksCompleted")?.toInt() ?: 0,
-                        hoursListened = (doc.getLong("totalMinutesListened") ?: 0).toInt() / 60,
-                        currentStreak = doc.getLong("currentStreak")?.toInt() ?: 0
-                    )
-                } catch (e: Exception) {
-                    android.util.Log.e("ProfileScreen", "Failed to fetch user stats", e)
-                }
-            }
-        } else {
-            userStats = UserStats(0, 0, 0)
-        }
-    }
-
-    val profile = if (authUser != null) {
-        UserProfile(
-            name = authUser?.displayName ?: authUser?.email?.substringBefore("@") ?: "User",
-            email = authUser?.email ?: "Not signed in",
-            stats = userStats
-        )
-    } else {
-        UserProfile.default
-    }
 
     // Playing state
     val isPlaying by context.appContainer.audiobookPlayer.isPlaying.collectAsState()
@@ -110,13 +67,8 @@ fun ProfileScreen(
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            scope.launch {
-                notificationRepository.refreshFcmToken()
-                notificationRepository.subscribeToTopics()
-            }
-        }
+    ) { _ ->
+        // Local notifications only — nothing to register once permission is granted.
     }
 
     if (showTimePickerDialog) {
@@ -186,66 +138,6 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.displaySmall,
                         color = TextPrimary
                     )
-                }
-            }
-
-            // User info
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .padding(bottom = 32.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Surface2),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profile",
-                            tint = AccentOrange,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Text(
-                            text = profile.name,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = profile.email,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
-
-            // Stats
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .padding(bottom = 32.dp)
-                ) {
-                    Text(
-                        text = "Your Stats",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    StatsGrid(stats = profile.stats)
                 }
             }
 
@@ -357,110 +249,7 @@ fun ProfileScreen(
             item {
                 NotificationTestingSection(notificationScheduler = notificationScheduler)
             }
-
-            // Account section
-            if (isSignedIn) {
-                item {
-                    SettingsSection(
-                        title = "Account",
-                        items = listOf(
-                            SettingItemData(
-                                icon = Icons.Outlined.Logout,
-                                label = "Sign Out",
-                                type = SettingType.Action,
-                                isDanger = true,
-                                onClick = {
-                                    scope.launch {
-                                        context.appContainer.authRepository.signOut()
-                                    }
-                                }
-                            )
-                        )
-                    )
-                }
-            } else {
-                item {
-                    SettingsSection(
-                        title = "Account",
-                        items = listOf(
-                            SettingItemData(
-                                icon = Icons.Outlined.Login,
-                                label = "Sign In",
-                                type = SettingType.Action,
-                                onClick = onSignInClick
-                            ),
-                            SettingItemData(
-                                icon = Icons.Outlined.PersonAdd,
-                                label = "Create Account",
-                                type = SettingType.Action,
-                                onClick = onSignUpClick
-                            )
-                        )
-                    )
-                }
-            }
         }
     }
 }
 
-@Composable
-private fun StatsGrid(stats: UserStats) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        StatCard(
-            icon = Icons.Outlined.MenuBook,
-            value = stats.booksCompleted.toString(),
-            label = "Books Completed",
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            icon = Icons.Outlined.Timer,
-            value = "${stats.hoursListened}h",
-            label = "Hours Listened",
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            icon = Icons.Outlined.TrendingUp,
-            value = "${stats.currentStreak}d",
-            label = "Current Streak",
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun StatCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Surface2)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = AccentOrange,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = TextTertiary
-        )
-    }
-}

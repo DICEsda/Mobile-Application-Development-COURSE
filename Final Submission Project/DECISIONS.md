@@ -76,23 +76,19 @@ Format: short ADRs. Each entry covers context, the decision, alternatives consid
 
 ---
 
-## 5. Offline-first sync with Firestore
+## 5. Local-only persistence (no cloud sync)
 
-**Context.** A user listens on the phone, then later on a tablet. Progress must follow them. Network may be unavailable.
+**Context.** Progress, library, and chapter data must survive app restarts. This is a single-user, on-device audiobook player — the books themselves live on the device, so the listening position belongs next to them.
 
-**Decision.** All writes go to **Room first**, then sync to Firestore in the background:
-1. `PlayerViewModel` writes progress to `ProgressDao` immediately (UI never waits on the network).
-2. `ProgressSyncRepository.syncUnsyncedProgress()` pushes pending changes when authenticated.
-3. `ProgressSyncRepository.pullCloudProgress()` pulls remote state on app start and post-login.
-4. Conflicts are resolved by `lastUpdated` timestamp (last-write-wins).
+**Decision.** **Room (SQLite) is the single source of truth.** `PlayerViewModel` writes progress to `ProgressDao` directly; nothing leaves the device. The only external actor in the whole app is the local LLM server (Book Companion).
+
+**History.** An earlier version mirrored progress to Firestore for cross-device sync (offline-first, last-write-wins by `lastUpdated`), gated behind Firebase Auth. That was **removed**: the cross-device use case didn't justify the cost — a cloud account, network dependence, security rules, and an auth wall — for a player whose audio files are local anyway. The `ProgressEntity.isSyncedToCloud` / `chapterProgressJson` columns remain in the schema (harmless) to avoid a migration.
 
 **Alternatives considered.**
-- **Firestore as primary store** with offline cache — simpler, but ties UI responsiveness to Firestore's local cache behavior and makes offline-only usage harder.
-- **CRDT or operational transform** — overkill; conflicts here are rare and benign.
+- **Firestore mirror (previous design)** — enabled multi-device, but added an account requirement and a sync surface that wasn't worth it here.
+- **Custom `.m2b` export** — already covers the "move my progress" case portably, without a backend (see #6).
 
-**Why offline-first with timestamp resolution.** Audiobook progress is intrinsically last-write-wins (you can only be at one position at a time). The added value of CRDTs would be invisible to users.
-
-**Consequences.** A device that's been offline for a long time and resumes can lose progress to a more recent write from another device. That matches user expectation for this domain.
+**Consequences.** No cross-device continuation out of the box; that's an explicit, accepted trade for zero accounts, zero network dependence, and a smaller attack surface. Portability is handled by `.m2b` export when needed.
 
 ---
 
@@ -128,19 +124,18 @@ Format: short ADRs. Each entry covers context, the decision, alternatives consid
 
 ---
 
-## 8. Firebase Auth + Biometric library lock
+## 8. Biometric library lock (no accounts)
 
-**Context.** A persistent identity is needed for cloud sync. The library on-device also needs gating against casual access (shared phone, etc.).
+**Context.** The library on-device needs gating against casual access (shared phone, etc.). With cloud sync removed (#5), there is no server identity to authenticate against — so there are **no user accounts** in the app at all.
 
-**Decision.** Two layers, intentionally separate:
-- **Firebase Auth** for identity and authorization to Firestore. Email/password.
-- **AndroidX Biometric** as a *local UI gate* — does not authenticate to the server, only unlocks the library screen.
+**Decision.** A single, local layer: **AndroidX Biometric** as a UI gate that unlocks the library screen. It authenticates nothing remote; it's purely on-device, and falls back to the device PIN/pattern/password when no biometric is enrolled.
+
+**History.** A previous version paired this with **Firebase Auth** (email/password) for cloud identity. That was removed along with Firestore — the only reason for auth was sync, and sync is gone.
 
 **Alternatives considered.**
-- **Biometric tied to Keystore** — would let me encrypt local data with a biometric-bound key. Heavier; not strictly needed for the threat model (the device is the trust boundary).
-- **Google Sign-In only** — better UX but ties identity to a Google account, which I wanted to avoid for portability.
+- **Biometric tied to Keystore** — would let me encrypt local data with a biometric-bound key. Heavier; not needed for the threat model (the device is the trust boundary).
 
-**Consequences.** Biometric unlock is convenience, not security; the underlying data on disk is not encrypted. Production hardening would add an encrypted DataStore for any sensitive prefs and consider a biometric-bound Keystore key for high-value data.
+**Consequences.** Biometric unlock is convenience, not strong security; on-disk data isn't encrypted. Production hardening would add an encrypted DataStore and a biometric-bound Keystore key for any high-value data.
 
 ---
 

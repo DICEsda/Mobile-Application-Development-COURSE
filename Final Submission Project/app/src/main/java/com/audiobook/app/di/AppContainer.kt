@@ -13,12 +13,10 @@ import com.audiobook.app.data.remote.llm.LmStudioProvider
 import com.audiobook.app.data.parser.M2BExporter
 import com.audiobook.app.data.parser.M2BImporter
 import com.audiobook.app.data.repository.AudiobookRepository
-import com.audiobook.app.data.repository.AuthRepository
 import com.audiobook.app.data.repository.BookCompanionRepository
 import com.audiobook.app.data.repository.M2BRepository
 import com.audiobook.app.data.repository.NotificationRepository
 import com.audiobook.app.data.repository.PreferencesRepository
-import com.audiobook.app.data.repository.ProgressSyncRepository
 import com.audiobook.app.service.AudiobookPlayer
 import com.audiobook.app.service.NotificationScheduler
 import com.audiobook.app.service.NotificationTriggerHelper
@@ -110,22 +108,6 @@ class AppContainer(private val context: Context) {
     }
     
     /**
-     * Auth Repository - handles Firebase authentication.
-     * Provides sign in, sign up, and password reset functionality.
-     */
-    val authRepository: AuthRepository by lazy {
-        AuthRepository()
-    }
-    
-    /**
-     * Progress Sync Repository - syncs playback progress to Firestore.
-     * Enables cross-device progress tracking.
-     */
-    val progressSyncRepository: ProgressSyncRepository by lazy {
-        ProgressSyncRepository(progressDao, audiobookDao)
-    }
-
-    /**
      * M2B Repository - handles import/export of M2B bookmark files.
      * Delegates to M2BExporter and M2BImporter for serialization.
      */
@@ -163,8 +145,8 @@ class AppContainer(private val context: Context) {
     }
 
     /**
-     * Notification Repository - manages FCM tokens and notification preferences.
-     * Handles push notifications and local notification scheduling.
+     * Notification Repository - manages local notification preferences and the
+     * once-per-hour cooldown. No push/cloud involved.
      */
     val notificationRepository: NotificationRepository by lazy {
         NotificationRepository(context)

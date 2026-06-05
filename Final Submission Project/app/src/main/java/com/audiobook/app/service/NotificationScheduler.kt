@@ -9,15 +9,13 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.audiobook.app.MainActivity
+import com.audiobook.app.appContainer
 import com.audiobook.app.data.repository.NotificationRepository
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
 /**
@@ -34,7 +32,12 @@ class NotificationScheduler(private val context: Context) {
         const val ACTION_DAILY_REMINDER = "com.audiobook.app.DAILY_REMINDER"
         const val ACTION_STREAK_REMINDER = "com.audiobook.app.STREAK_REMINDER"
         const val ACTION_MILESTONE = "com.audiobook.app.MILESTONE"
-        
+
+        // Notification channel IDs (channels are created in AudiobookApplication).
+        const val CHANNEL_ID_REMINDERS = "audiobook_reminders"
+        const val CHANNEL_ID_STREAKS = "audiobook_streaks"
+        const val CHANNEL_ID_MILESTONES = "audiobook_milestones"
+
         private const val REQUEST_CODE_DAILY = 1001
         private const val REQUEST_CODE_STREAK = 1002
     }
@@ -235,9 +238,9 @@ class NotificationReceiver : BroadcastReceiver() {
             context,
             title,
             body,
-            MyFirebaseMessagingService.CHANNEL_ID_REMINDERS
+            NotificationScheduler.CHANNEL_ID_REMINDERS
         )
-        
+
         notificationRepository.updateLastNotificationTime(System.currentTimeMillis())
         notificationRepository.logNotificationSent("reminder")
     }
@@ -264,7 +267,7 @@ class NotificationReceiver : BroadcastReceiver() {
                 context,
                 title,
                 body,
-                MyFirebaseMessagingService.CHANNEL_ID_STREAKS
+                NotificationScheduler.CHANNEL_ID_STREAKS
             )
             
             notificationRepository.updateLastNotificationTime(System.currentTimeMillis())
@@ -288,7 +291,7 @@ class NotificationReceiver : BroadcastReceiver() {
             context,
             title,
             message,
-            MyFirebaseMessagingService.CHANNEL_ID_MILESTONES
+            NotificationScheduler.CHANNEL_ID_MILESTONES
         )
     }
     
@@ -327,45 +330,19 @@ class NotificationReceiver : BroadcastReceiver() {
     }
     
     /**
-     * Get the title of the book currently in progress.
+     * Get the title of the book currently in progress, from the local library.
      */
-    private suspend fun getCurrentBookInProgress(context: Context): String? {
-        val auth = FirebaseAuth.getInstance()
-        val firestore = FirebaseFirestore.getInstance()
-        val userId = auth.currentUser?.uid ?: return null
-        
+    private fun getCurrentBookInProgress(context: Context): String? {
         return try {
-            val snapshot = firestore.collection("users")
-                .document(userId)
-                .collection("progress")
-                .orderBy("lastUpdated", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(1)
-                .get()
-                .await()
-            
-            snapshot.documents.firstOrNull()?.getString("bookTitle")
+            context.appContainer.audiobookRepository.currentBook.value?.title
         } catch (e: Exception) {
             null
         }
     }
-    
+
     /**
-     * Get user's current listening streak.
+     * Listening streaks are not tracked locally (they were a cloud-only stat),
+     * so there is no streak to remind about. Returns 0.
      */
-    private suspend fun getCurrentStreak(context: Context): Int {
-        val auth = FirebaseAuth.getInstance()
-        val firestore = FirebaseFirestore.getInstance()
-        val userId = auth.currentUser?.uid ?: return 0
-        
-        return try {
-            val doc = firestore.collection("users")
-                .document(userId)
-                .get()
-                .await()
-            
-            doc.getLong("currentStreak")?.toInt() ?: 0
-        } catch (e: Exception) {
-            0
-        }
-    }
+    private fun getCurrentStreak(context: Context): Int = 0
 }

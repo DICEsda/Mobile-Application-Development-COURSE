@@ -11,7 +11,6 @@ import androidx.navigation.compose.composable
 import com.audiobook.app.appContainer
 import com.audiobook.app.ui.screens.*
 import com.audiobook.app.ui.viewmodel.PlayerViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -31,8 +30,6 @@ private fun NavHostController.navigateTopLevel(route: String) {
 
 sealed class Screen(val route: String) {
     object LibraryLocked : Screen("library_locked")
-    object SignIn : Screen("sign_in")
-    object SignUp : Screen("sign_up")
     object Library : Screen("library")
     object BookDetail : Screen("book_detail/{bookId}") {
         fun createRoute(bookId: String) = "book_detail/$bookId"
@@ -44,7 +41,6 @@ sealed class Screen(val route: String) {
         fun createRoute(bookId: String) = "book_companion/$bookId"
     }
     object Profile : Screen("profile")
-    object Settings : Screen("settings")
 }
 
 @Composable
@@ -64,52 +60,6 @@ fun AppNavigation(
         composable(Screen.LibraryLocked.route) {
             LibraryLockedScreen(
                 onUnlock = onAuthenticate
-            )
-        }
-        
-        composable(Screen.SignIn.route) {
-            SignInScreen(
-                authRepository = context.appContainer.authRepository,
-                onSignInSuccess = {
-                    // Sync Firestore progress after successful sign-in
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            context.appContainer.progressSyncRepository.syncUnsyncedProgress()
-                            context.appContainer.progressSyncRepository.pullCloudProgress()
-                        } catch (e: Exception) {
-                            android.util.Log.e("Navigation", "Post-login sync failed", e)
-                        }
-                    }
-                    navController.navigate(Screen.Library.route) {
-                        popUpTo(Screen.SignIn.route) { inclusive = true }
-                    }
-                },
-                onNavigateToSignUp = {
-                    navController.navigate(Screen.SignUp.route)
-                }
-            )
-        }
-
-        composable(Screen.SignUp.route) {
-            SignUpScreen(
-                authRepository = context.appContainer.authRepository,
-                onSignUpSuccess = {
-                    // Sync Firestore progress after successful sign-up
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            context.appContainer.progressSyncRepository.syncUnsyncedProgress()
-                            context.appContainer.progressSyncRepository.pullCloudProgress()
-                        } catch (e: Exception) {
-                            android.util.Log.e("Navigation", "Post-signup sync failed", e)
-                        }
-                    }
-                    navController.navigate(Screen.Library.route) {
-                        popUpTo(Screen.SignUp.route) { inclusive = true }
-                    }
-                },
-                onNavigateToSignIn = {
-                    navController.popBackStack()
-                }
             )
         }
         
@@ -145,12 +95,6 @@ fun AppNavigation(
                 },
                 onProfileClick = {
                     navController.navigateTopLevel(Screen.Profile.route)
-                },
-                onSignInClick = {
-                    navController.navigate(Screen.SignIn.route)
-                },
-                onSignUpClick = {
-                    navController.navigate(Screen.SignUp.route)
                 },
                 shouldScrollToCurrentBook = cameFromPlayer
             )
@@ -250,12 +194,6 @@ fun AppNavigation(
                             navController.navigate(Screen.Player.createRoute(currentBookId))
                         }
                     }
-                },
-                onSignInClick = {
-                    navController.navigate(Screen.SignIn.route)
-                },
-                onSignUpClick = {
-                    navController.navigate(Screen.SignUp.route)
                 }
             )
         }
