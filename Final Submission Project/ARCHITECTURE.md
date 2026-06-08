@@ -82,6 +82,10 @@ flowchart TB
     Remote --> OL
     Remote --> LLM
 
+    VMs -. coroutines .-> CO["Coroutines — ViewModels run work in viewModelScope<br/>and expose StateFlow. Repositories and parsers<br/>are suspend functions on Dispatchers.IO"]
+    classDef coro fill:#16202b,stroke:#4db6ac,color:#cfeee9
+    class CO coro
+
     classDef ui fill:#2d3142,stroke:#ef8354,color:#fff
     classDef data fill:#3a3a4a,stroke:#8aa,color:#fff
     classDef ext fill:#1f2a24,stroke:#6c6,color:#fff
@@ -213,6 +217,7 @@ sequenceDiagram
     EXO-->>SVC: onIsPlayingChanged / position ticks
     SVC-->>AP: state updates
     AP-->>VM: StateFlow(isPlaying, positionMs)
+    note over AP,SVC: Coroutines — AudiobookPlayer and PlaybackService each own a<br/>CoroutineScope(Dispatchers.Main + SupervisorJob). A launch job polls<br/>position, and the scope is cancelled in onDestroy.
     VM-->>PS: collectAsStateWithLifecycle → recompose
 
     Note over EXO,SVC: System gives lock-screen +<br/>Bluetooth controls for free
@@ -257,6 +262,7 @@ sequenceDiagram
     Note over Repo: buildWireMessages():<br/>merge grounding preamble<br/>(title, author, chapters,<br/>current position) into the<br/>FIRST user message*
     Repo->>Prov: chatStream(messages)
     Prov->>LM: POST /v1/chat/completions (stream=true)
+    note over VM,Prov: Coroutines — chatStream returns a cold Flow (flow builder,<br/>flowOn Dispatchers.IO). The ViewModel collects it inside<br/>viewModelScope.launch and appends each delta to StateFlow.
     loop SSE: "data: {delta}"
         LM-->>Prov: token delta
         Prov-->>Repo: emit(delta)
@@ -558,6 +564,20 @@ For each term: **what it is** (plain English) · **why it's here** (how *this* a
   app from a toy one."*
 
 ### Cross-cutting
+
+**Coroutines / structured concurrency**
+- *What:* Kotlin's way to write asynchronous code that *reads* sequentially. A `suspend` function
+  can pause without blocking a thread; a `CoroutineScope` owns running jobs and cancels them together
+  (that's the "structured" part). `Dispatchers.IO` runs work on a background thread pool.
+- *Here, by layer:* **UI** — ViewModels launch work in `viewModelScope` and lift DAO `Flow`s into
+  `StateFlow` with `stateIn(viewModelScope, …)`; the LLM reply is collected in `viewModelScope.launch`.
+  **Data** — repositories, parsers, and the scanner are `suspend fun … = withContext(Dispatchers.IO)`,
+  so disk/network never touches the main thread; `LmStudioProvider.chatStream` is a cold `flow { … }.flowOn(Dispatchers.IO)`.
+  **Service** — `AudiobookPlayer` and `PlaybackService` each hold a `CoroutineScope(Dispatchers.Main + SupervisorJob())`
+  for position polling, cancelled in `onDestroy`. (One pragmatic `runBlocking` in `MainActivity.onCreate`
+  reads a couple of prefs before first frame — a deliberate, documented trade-off.)
+- *"Coroutines are the concurrency model throughout: suspend + Dispatchers.IO off the main thread,
+  scopes tied to lifecycles so jobs cancel automatically, and Flows bridging the layers reactively."*
 
 **Manual DI / `AppContainer`**
 - *What:* **Dependency Injection** = giving an object its dependencies from outside rather than letting it
