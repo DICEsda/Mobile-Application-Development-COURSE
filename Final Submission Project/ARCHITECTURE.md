@@ -11,11 +11,14 @@ Pre-rendered PNGs live in [`docs/diagrams/`](docs/diagrams/):
 | File | Diagram |
 |------|---------|
 | `01-layered-architecture.png` | §1 Layered architecture |
-| `02-dependency-graph.png` | §2 Dependency graph |
-| `03-playback-sequence.png` | §3 Playback sequence |
-| `04-book-companion-llm.png` | §4 Book Companion (LLM) |
-| `05-library-and-progress.png` | §5 Library load & progress |
-| `06-startup-gates.png` | §6 Startup gates |
+| `02-compartment-purposes.png` | §2 What each compartment is for |
+| `03-dependency-graph.png` | §3 Dependency graph |
+| `04-playback-sequence.png` | §4 Playback sequence |
+| `05-book-companion-llm.png` | §5 Book Companion (LLM) |
+| `06-library-and-progress.png` | §6 Library load & progress |
+| `07-startup-gates.png` | §7 Startup gates |
+| `08-cloud-before.png` | §8 Before: cloud-backed |
+| `09-cloud-after.png` | §8 After: fully local |
 
 > **Regenerating:** `npx -y @mermaid-js/mermaid-cli -i ARCHITECTURE.md -o docs/diagrams/architecture.png -t dark -b "#1e1e2e" --scale 3`
 > writes generic names (`architecture-1.png` …). Rename them back to the descriptive names above after rendering.
@@ -82,7 +85,41 @@ flowchart TB
 
 ---
 
-## 2. Dependency graph (who creates whom)
+## 2. What each compartment is for (note card)
+
+One card per top-level package. Read it as: **compartment — one-sentence job — the rule it
+obeys.** This is the "where does my code go?" cheat sheet.
+
+```mermaid
+flowchart TB
+    subgraph row1[" "]
+        direction LR
+        UI["UI — ui/<br/>—<br/>Draw the screens and hold screen state.<br/>Compose screens + ViewModels (StateFlow).<br/>Rule: talks only to the data layer,<br/>never to the DB or network directly."]
+        DATA["DATA — data/<br/>—<br/>Own all data and the rules around it.<br/>Repositories over Room (local),<br/>Retrofit (remote), parsers (files).<br/>Rule: the app's single source of truth."]
+        SERVICE["SERVICE — service/<br/>—<br/>Long-running work that must outlive the UI.<br/>PlaybackService (Media3/ExoPlayer)<br/>+ local notifications.<br/>Rule: keeps audio alive when the screen is off."]
+    end
+    subgraph row2[" "]
+        direction LR
+        DI["DI — di/<br/>—<br/>Wire everything together, once, at startup.<br/>AppContainer builds the singletons (by lazy).<br/>Rule: the one composition root —<br/>nobody else news up dependencies."]
+        NAV["NAVIGATION — navigation/<br/>—<br/>Move the user between screens.<br/>One Activity, a NavHost, sealed Screen routes.<br/>Rule: routing lives here, not in screens."]
+        EXT["EXTERNAL — off-device<br/>—<br/>The only actors outside the phone.<br/>OpenLibrary API (covers/descriptions)<br/>+ LM Studio local LLM.<br/>Rule: everything else stays on-device."]
+    end
+    row1 ~~~ row2
+
+    classDef card fill:#2a2a38,stroke:#ef8354,color:#fff,text-align:left
+    classDef ext fill:#1f2a24,stroke:#6c6,color:#fff
+    classDef wrap fill:none,stroke:none
+    class UI,DATA,SERVICE,DI,NAV card
+    class EXT ext
+    class row1,row2 wrap
+```
+
+> Mental model: a tap travels **NAVIGATION → UI → (ViewModel) → DATA**, occasionally reaching
+> **EXTERNAL**; **SERVICE** runs alongside for playback; **DI** built all of them at launch.
+
+---
+
+## 3. Dependency graph (who creates whom)
 
 `AppContainer` is the composition root. Everything is a `by lazy` singleton, so each box is
 created **once**, the first time something asks for it. This is the hand-written version of
@@ -130,7 +167,7 @@ flowchart TD
 
 ---
 
-## 3. Playback — the hard part
+## 4. Playback — the hard part
 
 Why this is non-trivial: audio must keep playing when the screen is gone. So playback lives
 in a **`MediaSessionService`** (a long-running background component owned by the OS), *not*
@@ -173,7 +210,7 @@ Key configuration in `PlaybackService` worth being able to explain:
 
 ---
 
-## 4. Book Companion — the local-LLM feature
+## 5. Book Companion — the local-LLM feature
 
 Your standout feature. The flow shows the two things that make it interesting: the
 **grounding** step (book context is injected so the model can't make things up), and
@@ -210,7 +247,7 @@ sequenceDiagram
 
 ---
 
-## 5. Library load & progress persistence (data flow)
+## 6. Library load & progress persistence (data flow)
 
 How a book gets on screen and how "where I left off" survives an app restart. Room is the
 **single source of truth** — `Flow` from the DAO means the UI updates reactively whenever
@@ -240,7 +277,7 @@ flowchart LR
 
 ---
 
-## 6. App startup gates (first-run → unlocked)
+## 7. App startup gates (first-run → unlocked)
 
 What `MainActivity` walks the user through before the real app appears.
 
@@ -258,6 +295,84 @@ flowchart LR
     Lock -->|fingerprint / face /<br/>device PIN fallback| Lib
     Lib --> Rest[Rest of the app:<br/>Player · BookDetail · Companion · Profile]
 ```
+
+---
+
+## 8. From cloud to fully local (before & after)
+
+The app **started life cloud-backed** and was deliberately stripped to **local-only**. This is
+the single biggest architectural change in its history, and the reasoning is the kind of
+trade-off an interviewer will want to hear (see DECISIONS #5 and #8).
+
+> The "before" diagram is **reconstructed from the decision log** — that code has been removed
+> from the repo. It's here to show *what changed and why*, not to describe current code.
+
+### Before — Room as a cache, Firestore as the sync target, behind an auth wall
+
+```mermaid
+flowchart TB
+    subgraph Device["On the device"]
+        UIb["UI + ViewModels"]
+        Repob["Repositories"]
+        Roomb[("Room DB<br/>local cache")]
+        Sync["ProgressSyncRepository<br/>offline-first,<br/>last-write-wins by lastUpdated"]
+        UIb --> Repob --> Roomb
+        Repob --> Sync
+    end
+    subgraph FB["Firebase (cloud)"]
+        Auth["Firebase Auth<br/>email / password"]
+        FS[("Firestore<br/>progress mirror")]
+    end
+    Wall{{"Auth wall:<br/>must sign in to use the app"}}
+    UIb -. gated by .-> Wall --> Auth
+    Sync <-->|"mirror progress<br/>(needs network)"| FS
+    Auth -. identifies the user for .-> FS
+
+    classDef cloud fill:#3a2a2a,stroke:#e06,color:#fff
+    class FB,Auth,FS,Wall cloud
+```
+
+### After — Room is the single source of truth; the LLM is the only thing off-device
+
+```mermaid
+flowchart TB
+    subgraph Device2["On the device — everything that matters"]
+        Bio{{"Biometric / device-PIN<br/>UI gate (local only,<br/>no account behind it)"}}
+        UIa["UI + ViewModels"]
+        Repoa["Repositories"]
+        Rooma[("Room DB<br/>SINGLE source of truth")]
+        M2B[".m2b export / import<br/>portable progress,<br/>no backend"]
+        Bio -. unlocks .-> UIa
+        UIa --> Repoa --> Rooma
+        Rooma --> M2B
+    end
+    LLM["LM Studio local server<br/>(the ONLY external actor)"]
+    Repoa -->|"Book Companion only"| LLM
+
+    classDef local fill:#1f2a24,stroke:#6c6,color:#fff
+    class Device2,Bio,UIa,Repoa,Rooma,M2B local
+```
+
+### What changed, and why
+
+| | Before | After |
+|---|--------|-------|
+| **Progress store** | Room cache + Firestore mirror | Room only — promoted to single source of truth |
+| **Identity** | Firebase Auth (email/password) | None — no accounts at all |
+| **Library lock** | Biometric *plus* cloud auth | Biometric / device-PIN as a pure local UI gate |
+| **Cross-device** | Sync via Firestore | `.m2b` export/import (manual, portable) |
+| **Network needed?** | Yes, for sync + sign-in | No (only the optional local LLM) |
+| **External actors** | Firestore, Firebase Auth, OpenLibrary | OpenLibrary + local LLM |
+
+**Why remove it.** The cross-device use case didn't justify the cost: an account requirement,
+a network dependency, Firestore security rules, and an auth wall — for a player whose audio
+files live on the device anyway. Going local-only buys **zero accounts, zero network
+dependence, and a smaller attack surface**; portability is handled by `.m2b` when actually needed.
+
+**Honest residue.** Two columns on `ProgressEntity` (`isSyncedToCloud`, `chapterProgressJson`)
+and the `getUnsyncedProgress` / `markAsSynced` DAO methods survive from the old design — left in
+place to avoid a schema migration. They're inert today. (A good "what would you clean up next?"
+answer.)
 
 ---
 
