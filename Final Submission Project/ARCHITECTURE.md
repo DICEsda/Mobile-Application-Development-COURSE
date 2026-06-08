@@ -31,7 +31,13 @@ Read top-to-bottom. Each layer only talks to the one below it. The UI never touc
 database or the network directly — it goes through a ViewModel, then a Repository.
 
 ```mermaid
+---
+title: "Flowchart · Layered architecture"
+---
 flowchart TB
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — how the layers stack and who talks to whom (read top to bottom)."]:::about
+    CARD ~~~ UI
     subgraph UI["UI layer — Jetpack Compose (ui/)"]
         direction LR
         Screens["Screens<br/>Library · BookDetail · Player<br/>BookCompanion · Profile · Settings · LibraryLocked"]
@@ -91,7 +97,13 @@ One card per top-level package. Read it as: **compartment — one-sentence job �
 obeys.** This is the "where does my code go?" cheat sheet.
 
 ```mermaid
+---
+title: "Reference card · What each compartment is for"
+---
 flowchart TB
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — where does my code go? One card per top-level package."]:::about
+    CARD ~~~ row1
     subgraph row1[" "]
         direction LR
         UI["UI — ui/<br/>—<br/>Draw the screens and hold screen state.<br/>Compose screens + ViewModels (StateFlow).<br/>Rule: talks only to the data layer,<br/>never to the DB or network directly."]
@@ -126,7 +138,13 @@ created **once**, the first time something asks for it. This is the hand-written
 what Hilt would generate (see DECISIONS #1).
 
 ```mermaid
+---
+title: "Flowchart · Dependency graph (object wiring)"
+---
 flowchart TD
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — who creates whom: the AppContainer singleton graph."]:::about
+    CARD ~~~ App
     App["AudiobookApplication<br/>holds the single AppContainer"] --> Container["AppContainer(context)"]
 
     Container --> DB["AudiobookDatabase (Room)"]
@@ -174,6 +192,9 @@ in a **`MediaSessionService`** (a long-running background component owned by the
 in the Activity. The UI controls it remotely through a `MediaController`.
 
 ```mermaid
+---
+title: "Sequence diagram · Playback"
+---
 sequenceDiagram
     participant U as User
     participant PS as PlayerScreen (Compose)
@@ -183,6 +204,7 @@ sequenceDiagram
     participant EXO as ExoPlayer
     participant DAO as ProgressDao (Room)
 
+    note over U,DAO: About — what happens from a Play tap to audio + saved progress.
     U->>PS: tap Play
     PS->>VM: onPlay()
     VM->>AP: play()
@@ -217,6 +239,9 @@ Your standout feature. The flow shows the two things that make it interesting: t
 **streaming** (the reply fades in token-by-token over Server-Sent Events).
 
 ```mermaid
+---
+title: "Sequence diagram · Book Companion (LLM)"
+---
 sequenceDiagram
     participant U as User
     participant CS as BookCompanionScreen
@@ -225,6 +250,7 @@ sequenceDiagram
     participant Prov as LmStudioProvider
     participant LM as LM Studio (local server)
 
+    note over U,LM: About — how a question becomes a grounded, streamed LLM answer.
     U->>CS: types "Who is the narrator?"
     CS->>VM: ask(question)
     VM->>Repo: askStream(book, history, question)
@@ -254,7 +280,13 @@ How a book gets on screen and how "where I left off" survives an app restart. Ro
 the data changes.
 
 ```mermaid
+---
+title: "Flowchart · Library load & progress"
+---
 flowchart LR
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — how books load and how your position survives a restart."]:::about
+    CARD ~~~ Folder
     subgraph Import["Adding books (SAF)"]
         Folder["User picks a folder<br/>(ACTION_OPEN_DOCUMENT_TREE)"] --> Scan["AudiobookScanner<br/>+ ChapterParser"]
         Scan --> Insert["AudiobookDao.insert*"]
@@ -282,7 +314,13 @@ flowchart LR
 What `MainActivity` walks the user through before the real app appears.
 
 ```mermaid
+---
+title: "Flowchart · App startup gates"
+---
 flowchart LR
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — the checks between launch and the unlocked library."]:::about
+    CARD ~~~ Start
     Start([App launch]) --> D{Disclaimer<br/>accepted?}
     D -- no --> DD[Terms & Disclaimer dialog]
     DD --> D
@@ -310,7 +348,13 @@ trade-off an interviewer will want to hear (see DECISIONS #5 and #8).
 ### Before — Room as a cache, Firestore as the sync target, behind an auth wall
 
 ```mermaid
+---
+title: "Flowchart · Before — cloud-backed (removed)"
+---
 flowchart TB
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — previous design: progress mirrored to Firebase behind an auth wall."]:::about
+    CARD ~~~ UIb
     subgraph Device["On the device"]
         UIb["UI + ViewModels"]
         Repob["Repositories"]
@@ -335,7 +379,13 @@ flowchart TB
 ### After — Room is the single source of truth; the LLM is the only thing off-device
 
 ```mermaid
+---
+title: "Flowchart · After — fully local"
+---
 flowchart TB
+    classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
+    CARD["About — current design: everything on-device; the LLM is the only external actor."]:::about
+    CARD ~~~ Bio
     subgraph Device2["On the device — everything that matters"]
         Bio{{"Biometric / device-PIN<br/>UI gate (local only,<br/>no account behind it)"}}
         UIa["UI + ViewModels"]
