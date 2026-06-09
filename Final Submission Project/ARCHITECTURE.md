@@ -141,46 +141,61 @@ flowchart TB
 created **once**, the first time something asks for it. This is the hand-written version of
 what Hilt would generate (see DECISIONS #1).
 
+> **Reading the arrows.** Two relationships, two line styles:
+> **solid `A --> B`** = *A is injected into B* (A is a constructor dependency of B);
+> **dotted `A -.creates.-> B`** = *A creates / owns B*. The composition root and the Room
+> database **create** their objects; everything else is **injected**. (Note this is the
+> opposite direction from §1: that diagram shows *who calls whom* at runtime, this one shows
+> *what is plugged into what* at construction.)
+
 ```mermaid
 ---
 title: "Flowchart · Dependency graph (object wiring)"
 ---
 flowchart TD
     classDef about fill:#0f1420,stroke:#8a93a6,color:#cdd3df
-    CARD["About — who creates whom: the AppContainer singleton graph."]:::about
+    CARD["About — object wiring. Solid = injected into (constructor dependency). Dotted = creates / owns."]:::about
     CARD ~~~ App
-    App["AudiobookApplication<br/>holds the single AppContainer"] --> Container["AppContainer(context)"]
+    App["AudiobookApplication<br/>holds the single AppContainer"] -. creates .-> Container["AppContainer(context)"]
 
-    Container --> DB["AudiobookDatabase (Room)"]
-    DB --> AudioDao["audiobookDao"]
-    DB --> ProgDao["progressDao"]
+    %% Composition root creates the leaf objects and the database
+    Container -. creates .-> DB["AudiobookDatabase (Room)"]
+    Container -. creates .-> Prefs["PreferencesRepository<br/>(DataStore)"]
+    Container -. creates .-> ApiClient["OpenLibraryApi (Retrofit)"]
+    Container -. creates .-> NotifRepo["NotificationRepository"]
+    Container -. creates .-> NotifSched["NotificationScheduler"]
+    Container -. creates .-> ChapParser["ChapterParser"]
+    Container -. creates .-> AudioPlayer["AudiobookPlayer"]
+    Container -. creates .-> Exp["M2BExporter"]
+    Container -. creates .-> Imp["M2BImporter"]
 
-    Container --> Prefs["PreferencesRepository<br/>(DataStore)"]
-    Container --> ApiClient["OpenLibraryApi (Retrofit)"]
+    %% Room database exposes its DAOs
+    DB -. creates .-> AudioDao["audiobookDao"]
+    DB -. creates .-> ProgDao["progressDao"]
+
+    %% Injected dependencies (solid): A is a constructor argument of B
     ApiClient --> MetaRepo["BookMetadataRepository"]
 
     AudioDao --> AudioRepo["AudiobookRepository"]
     ProgDao --> AudioRepo
     Prefs --> AudioRepo
     MetaRepo --> AudioRepo
-    AudioRepo --> Scanner["AudiobookScanner"]
 
-    AudioRepo --> M2BRepo["M2BRepository"]
+    %% AudiobookRepository creates its own scanner; the scanner is then injected into M2BRepository
+    AudioRepo -. creates .-> Scanner["AudiobookScanner"]
+
+    Exp --> M2BRepo["M2BRepository"]
+    Imp --> M2BRepo
     AudioDao --> M2BRepo
     ProgDao --> M2BRepo
-    M2BRepo --> Exp["M2BExporter"]
-    M2BRepo --> Imp["M2BImporter"]
+    Scanner --> M2BRepo
+    AudioRepo --> M2BRepo
 
     Prefs --> LlmProv["LlmProvider<br/>= LmStudioProvider"]
     LlmProv --> CompRepo["BookCompanionRepository"]
 
-    Container --> NotifRepo["NotificationRepository"]
-    Container --> NotifSched["NotificationScheduler"]
     NotifRepo --> TrigHelper["NotificationTriggerHelper"]
     NotifSched --> TrigHelper
-
-    Container --> ChapParser["ChapterParser"]
-    Container --> AudioPlayer["AudiobookPlayer"]
 ```
 
 > Note the seam at `LlmProvider`: callers depend on the **interface**, never on
