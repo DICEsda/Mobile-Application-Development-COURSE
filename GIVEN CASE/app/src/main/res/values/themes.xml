@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base theme. Actual colors come from the Compose RandomDogTheme at runtime;
+         this XML theme is the launch theme the window uses before Compose draws. -->
+    <style name="Theme.RandomDog" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash screen theme (AndroidX core-splashscreen). Shown until the first frame,
+         then installSplashScreen() swaps to postSplashScreenTheme. -->
+    <style name="Theme.RandomDog.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.RandomDog</item>
+    </style>
+</resources>
