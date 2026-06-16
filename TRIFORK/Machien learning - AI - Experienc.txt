@@ -1,0 +1,6 @@
+Machine Learning - Grade: Pass/Not Pass - 10 ECTS - Result: Pass
+https://kursuskatalog.au.dk/da/course/137623/SWMAL10-01-Machine-Learning
+
+Biomedical Machine Learning - Grade: Danish sclare - 5 ECTS - Result: 12
+https://kursuskatalog.au.dk/en/course/142022/STTBML-01-Biomedical-Machine-Learning
+
